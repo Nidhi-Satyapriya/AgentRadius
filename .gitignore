@@ -1,0 +1,20 @@
+# Third-party REA checkout used as a research tool; not part of AgentRadius.
+/rea/
+
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local AgentRadius data (inventory, audit, backups) must never be committed.
+.agentradius/
+
+# Local environment files may contain credentials.
+.env
+.env.*
+
+.DS_Store
+
+# Python bytecode from vendored skill scripts.
+__pycache__/
+*.pyc

@@ -1,0 +1,7 @@
+rea/
+.claude/
+docs/archive/starter/
+dist/
+node_modules/
+package-lock.json
+schemas/
