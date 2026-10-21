@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0",
+  "snapshot_id": "local-demo-2026-10-21",
+  "environment_id": "local-dev",
+  "collected_at": "2026-10-21T00:00:00Z",
+  "nodes": [
+    {
+      "id": "agent:release-helper",
+      "type": "agent",
+      "name": "Release Helper Agent",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "trust_boundary_id": "boundary:dev",
+      "attributes": {
+        "owner": "platform-team"
+      }
+    },
+    {
+      "id": "mcp:github-local",
+      "type": "mcp_server",
+      "name": "Local GitHub MCP",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "trust_boundary_id": "boundary:dev",
+      "attributes": {
+        "transport": "stdio"
+      }
+    },
+    {
+      "id": "tool:repo-write",
+      "type": "tool",
+      "name": "Repository write tool",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "trust_boundary_id": "boundary:dev",
+      "attributes": {
+        "capability": "write"
+      }
+    },
+    {
+      "id": "identity:bot",
+      "type": "identity",
+      "name": "Build Bot",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "trust_boundary_id": "boundary:ci",
+      "attributes": {
+        "kind": "service_account"
+      }
+    },
+    {
+      "id": "resource:repo",
+      "type": "resource",
+      "name": "example-org/release-repo",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "trust_boundary_id": "boundary:ci",
+      "attributes": {
+        "resource_kind": "repository",
+        "visibility": "private"
+      }
+    },
+    {
+      "id": "boundary:dev",
+      "type": "trust_boundary",
+      "name": "Developer Workstation",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "attributes": {}
+    },
+    {
+      "id": "boundary:ci",
+      "type": "trust_boundary",
+      "name": "CI Environment",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "environment_id": "local-dev",
+      "attributes": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:1",
+      "from": "agent:release-helper",
+      "to": "mcp:github-local",
+      "type": "CONNECTS_TO",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "observed",
+      "confidence": "high",
+      "evidence_ref": "fixture:sample-graph#edge-1"
+    },
+    {
+      "id": "edge:2",
+      "from": "mcp:github-local",
+      "to": "tool:repo-write",
+      "type": "EXPOSES_TOOL",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "observed",
+      "confidence": "high",
+      "evidence_ref": "fixture:sample-graph#edge-2"
+    },
+    {
+      "id": "edge:3",
+      "from": "tool:repo-write",
+      "to": "identity:bot",
+      "type": "AUTHENTICATES_WITH",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "inferred",
+      "confidence": "medium",
+      "evidence_ref": "fixture:sample-graph#edge-3"
+    },
+    {
+      "id": "edge:4",
+      "from": "identity:bot",
+      "to": "resource:repo",
+      "type": "CAN_ACCESS",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "observed",
+      "confidence": "high",
+      "evidence_ref": "fixture:sample-graph#edge-4"
+    },
+    {
+      "id": "edge:5",
+      "from": "agent:release-helper",
+      "to": "boundary:dev",
+      "type": "RUNS_IN",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "observed",
+      "confidence": "high",
+      "evidence_ref": "fixture:sample-graph#edge-5"
+    },
+    {
+      "id": "edge:6",
+      "from": "identity:bot",
+      "to": "boundary:ci",
+      "type": "RUNS_IN",
+      "source_id": "fixture:demo",
+      "observed_at": "2026-10-21T00:00:00Z",
+      "status": "observed",
+      "confidence": "high",
+      "evidence_ref": "fixture:sample-graph#edge-6"
+    }
+  ]
+}

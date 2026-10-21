@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "id": "local-mcp-config",
+  "name": "Local MCP Configuration Importer",
+  "kind": "local_config",
+  "mode": "read_only",
+  "capabilities": [
+    "inventory",
+    "tools",
+    "identities",
+    "resources"
+  ],
+  "requested_scopes": [],
+  "config_schema": {
+    "type": "object",
+    "required": [
+      "config_path"
+    ],
+    "properties": {
+      "config_path": {
+        "type": "string",
+        "description": "Path to an explicitly selected MCP configuration file"
+      },
+      "include_env_var_names": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "network": {
+    "allowed_hosts": [],
+    "timeout_seconds": 10,
+    "max_retries": 0
+  },
+  "secret_fields": [
+    "env",
+    "headers",
+    "authorization",
+    "token",
+    "password",
+    "api_key",
+    "private_key"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentradius.dev/schemas/connector-manifest.schema.json",
+  "title": "AgentRadius Connector Manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "kind",
+    "mode",
+    "capabilities",
+    "config_schema"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "local_config",
+        "http_api",
+        "cloud_api",
+        "scm_api",
+        "mcp_inventory"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "read_only",
+        "read_write"
+      ]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "inventory",
+          "permissions",
+          "resources",
+          "tools",
+          "identities",
+          "policies"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "requested_scopes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "config_schema": {
+      "type": "object"
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "allowed_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        }
+      },
+      "additionalProperties": false
+    },
+    "secret_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "documentation_url": {
+      "type": "string",
+      "format": "uri"
+    }
+  },
+  "additionalProperties": false
+}

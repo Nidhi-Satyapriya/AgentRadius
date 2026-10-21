@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentradius.dev/schemas/graph.schema.json",
+  "title": "AgentRadius Graph Snapshot",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "collected_at",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment_id": {
+      "type": "string"
+    },
+    "collected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "name",
+        "source_id",
+        "observed_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "agent",
+            "identity",
+            "mcp_server",
+            "tool",
+            "integration",
+            "credential_ref",
+            "resource",
+            "action",
+            "trust_boundary",
+            "policy"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "environment_id": {
+          "type": "string"
+        },
+        "trust_boundary_id": {
+          "type": "string"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "secret_value": {
+          "not": {}
+        }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "from",
+        "to",
+        "type",
+        "source_id",
+        "observed_at",
+        "status",
+        "confidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "USES_IDENTITY",
+            "CONNECTS_TO",
+            "EXPOSES_TOOL",
+            "AUTHENTICATES_WITH",
+            "HAS_POLICY",
+            "GRANTS_ACTION",
+            "CAN_ACCESS",
+            "RUNS_IN",
+            "CROSSES_BOUNDARY",
+            "OWNS",
+            "DERIVED_FROM"
+          ]
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "enum": [
+            "observed",
+            "inferred",
+            "stale",
+            "unknown",
+            "revoked"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "evidence_ref": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
