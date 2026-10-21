@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "2.0"
+    },
+    "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "collectedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "dataOrigin": {
+      "type": "string",
+      "enum": [
+        "fixture",
+        "local_discovery",
+        "import"
+      ]
+    },
+    "fixtureNotice": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "environmentLabel": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "nodes": {
+      "maxItems": 50000,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "pattern": "^[a-z][a-z0-9_-]*:\\S+$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "UserIdentity",
+              "Application",
+              "Process",
+              "Agent",
+              "MCPServer",
+              "Tool",
+              "OAuthGrant",
+              "CredentialReference",
+              "CloudRole",
+              "Resource",
+              "Permission",
+              "Policy",
+              "TrustBoundary"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "trustBoundaryId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "pattern": "^[a-z][a-z0-9_-]*:\\S+$"
+          },
+          "attributes": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "maxItems": 200,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                }
+              ]
+            }
+          },
+          "provenance": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "connectorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "evidenceRef": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "observedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "collectionMethod": {
+                  "type": "string",
+                  "enum": [
+                    "fixture",
+                    "config_parse",
+                    "filesystem_metadata",
+                    "os_api",
+                    "provider_api",
+                    "runtime_observation",
+                    "user_import",
+                    "inference_rule"
+                  ]
+                }
+              },
+              "required": [
+                "connectorId",
+                "evidenceRef",
+                "observedAt",
+                "collectionMethod"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "label",
+          "provenance"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "maxItems": 200000,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "pattern": "^[a-z][a-z0-9_-]*:\\S+$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RUNS_AS",
+              "HOSTS",
+              "CONNECTS_TO",
+              "EXPOSES_TOOL",
+              "AUTHENTICATES_WITH",
+              "HOLDS_CREDENTIAL_REFERENCE",
+              "GRANTS_SCOPE",
+              "ASSUMES_ROLE",
+              "CAN_READ",
+              "CAN_WRITE",
+              "CAN_DELETE",
+              "CAN_EXECUTE",
+              "CAN_ADMIN",
+              "DELEGATES_TO",
+              "TRUSTS",
+              "REACHES",
+              "CONTROLLED_BY"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "pattern": "^[a-z][a-z0-9_-]*:\\S+$"
+          },
+          "to": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300,
+            "pattern": "^[a-z][a-z0-9_-]*:\\S+$"
+          },
+          "assertion": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "declared",
+              "inferred",
+              "hypothetical",
+              "unknown"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "lifecycle": {
+            "default": "active",
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked"
+            ]
+          },
+          "inferenceRule": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "requiresAction": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "delete",
+              "execute",
+              "admin"
+            ]
+          },
+          "scopes": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "conditions": {
+            "default": [],
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "holds",
+                    "does_not_hold",
+                    "unresolved"
+                  ]
+                }
+              },
+              "required": [
+                "description",
+                "state"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "attributes": {
+            "default": {},
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "maxItems": 200,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                }
+              ]
+            }
+          },
+          "provenance": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "connectorId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "evidenceRef": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "observedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "collectionMethod": {
+                  "type": "string",
+                  "enum": [
+                    "fixture",
+                    "config_parse",
+                    "filesystem_metadata",
+                    "os_api",
+                    "provider_api",
+                    "runtime_observation",
+                    "user_import",
+                    "inference_rule"
+                  ]
+                }
+              },
+              "required": [
+                "connectorId",
+                "evidenceRef",
+                "observedAt",
+                "collectionMethod"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "from",
+          "to",
+          "assertion",
+          "confidence",
+          "provenance"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "connectorRuns": {
+      "default": [],
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "connectorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "partial",
+              "requires_permission",
+              "unsupported",
+              "failed",
+              "disabled",
+              "not_implemented"
+            ]
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "dataCategories": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "requiredPrivileges": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "coverage": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "blindSpots": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "errors": {
+            "default": [],
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "connectorId",
+          "label",
+          "version",
+          "status",
+          "readOnly",
+          "dataCategories",
+          "requiredPrivileges",
+          "coverage",
+          "blindSpots"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "collectedAt",
+    "dataOrigin",
+    "environmentLabel",
+    "nodes",
+    "edges"
+  ],
+  "additionalProperties": false
+}

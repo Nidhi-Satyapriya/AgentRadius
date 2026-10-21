@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ruleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ruleVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "accepted_risk",
+        "in_progress",
+        "resolved",
+        "false_positive"
+      ]
+    },
+    "affectedEntityIds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pathEdgeIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "remediation": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relatedControlIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "detectedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "evidenceIsStale": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "ruleId",
+    "ruleVersion",
+    "title",
+    "severity",
+    "confidence",
+    "status",
+    "affectedEntityIds",
+    "pathEdgeIds",
+    "rationale",
+    "assumptions",
+    "evidenceRefs",
+    "remediation",
+    "relatedControlIds",
+    "detectedAt",
+    "evidenceIsStale"
+  ],
+  "additionalProperties": false
+}
