@@ -3,6 +3,7 @@ import type { ConnectorResult, ScanContext } from "./contract.ts";
 import { scanMcpClients } from "./mcpConfig/scan.ts";
 
 export type { ConnectorResult, ScanContext } from "./contract.ts";
+export { declaredAgentsToGraph } from "./declaredAgents.ts";
 export { slug } from "./mcpConfig/toGraph.ts";
 
 /**
