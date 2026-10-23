@@ -3,3 +3,4 @@ export * from "./edgeSemantics.ts";
 export * from "./schema.ts";
 export * from "./attributeKeys.ts";
 export * from "./finding.ts";
+export * from "./agentCatalog.ts";
