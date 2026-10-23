@@ -11,6 +11,7 @@ export * from "./controls.ts";
 export * from "./mitigations.ts";
 export * from "./overview.ts";
 export * from "./permissionInventory.ts";
+export * from "./reachMatrix.ts";
 export * from "./settings.ts";
 export * from "./simulation.ts";
 export { FINDING_RULES } from "./findings/rules.ts";
