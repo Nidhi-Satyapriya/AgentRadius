@@ -12,14 +12,16 @@ import type { ConnectorResult } from "./contract.ts";
 const EVIDENCE = "Entered in AgentRadius by you";
 
 const ACCESS_EDGES: Readonly<Record<DeclaredAgent["access"], readonly EdgeType[]>> = {
+  as_you: ["CAN_READ", "CAN_WRITE"],
   read: ["CAN_READ"],
   read_write: ["CAN_READ", "CAN_WRITE"],
-  unknown: ["REACHES"],
 };
+const ACTS_AS_USER_RULE = "in-app-ai-acts-as-user";
 
 /**
- * Turns agents the user described into graph records. Nothing is contacted or verified, so every
- * relationship is `declared` with medium confidence and `user_import` provenance.
+ * Turns agents the user described into graph records. Nothing is contacted or verified. Limits the
+ * user chose are `declared`; the default "acts as you" access is `inferred`. All have medium
+ * confidence and `user_import` provenance.
  */
 export function declaredAgentsToGraph(agents: readonly DeclaredAgent[]): ConnectorResult {
   const nodes = new Map<string, GraphNode>();
@@ -54,7 +56,10 @@ export function declaredAgentsToGraph(agents: readonly DeclaredAgent[]): Connect
       id: agent.id,
       type: "Agent",
       label: agent.name,
-      description: "Added by you. AgentRadius has not verified what this agent can access.",
+      description:
+        agent.access === "as_you"
+          ? "Added by you. Assistants inside an app act with your permissions there, so it is assumed to reach whatever you can. Not verified."
+          : "Added by you, with the access you chose. Not verified.",
       ...(home !== undefined ? { trustBoundaryId: home } : {}),
       attributes: { declaredBy: "user", runtime: agent.runtime },
       provenance: provenance(agent.declaredAt),
@@ -64,7 +69,7 @@ export function declaredAgentsToGraph(agents: readonly DeclaredAgent[]): Connect
       add({
         id: resId,
         type: "Resource",
-        label: `${app.label} data`,
+        label: `${app.label}: everything you can access`,
         trustBoundaryId: `tb:saas.${app.provider}`,
         attributes: {},
         provenance: provenance(agent.declaredAt),
@@ -75,7 +80,8 @@ export function declaredAgentsToGraph(agents: readonly DeclaredAgent[]): Connect
           type,
           from: agent.id,
           to: resId,
-          assertion: "declared",
+          assertion: agent.access === "as_you" ? "inferred" : "declared",
+          ...(agent.access === "as_you" ? { inferenceRule: ACTS_AS_USER_RULE } : {}),
           confidence: "medium",
           lifecycle: "active",
           conditions: [],

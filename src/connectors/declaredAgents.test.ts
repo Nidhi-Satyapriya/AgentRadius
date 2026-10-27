@@ -10,7 +10,7 @@ const AGENT = {
   name: "Slack AI",
   runtime: "in_app",
   appIds: ["slack", "gmail"],
-  access: "unknown",
+  access: "as_you",
   declaredAt: "2026-10-23T10:00:00.000Z",
 } as const;
 
@@ -22,12 +22,19 @@ describe("declared agents", () => {
     }
   });
 
-  it("records only declared, unverified relationships with user provenance", () => {
+  it("assumes an in-app agent acts as you, labeled as inferred, with user provenance", () => {
     const { nodes, edges, run } = declaredAgentsToGraph([AGENT]);
     expect(run.readOnly).toBe(true);
-    expect(edges.map((e) => [e.type, e.to, e.assertion])).toEqual([
-      ["REACHES", "res:app.gmail", "declared"],
-      ["REACHES", "res:app.slack", "declared"],
+    expect(edges.map((e) => [e.type, e.to, e.assertion, e.inferenceRule])).toEqual([
+      ["CAN_READ", "res:app.gmail", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_READ", "res:app.slack", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_WRITE", "res:app.gmail", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_WRITE", "res:app.slack", "inferred", "in-app-ai-acts-as-user"],
+    ]);
+    const limited = declaredAgentsToGraph([{ ...AGENT, access: "read" }]).edges;
+    expect(limited.map((e) => [e.type, e.assertion])).toEqual([
+      ["CAN_READ", "declared"],
+      ["CAN_READ", "declared"],
     ]);
     for (const record of [...nodes, ...edges])
       expect(record.provenance.every((p) => p.collectionMethod === "user_import")).toBe(true);

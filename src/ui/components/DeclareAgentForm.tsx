@@ -26,7 +26,7 @@ export function DeclareAgentForm({
   const [name, setName] = useState(initial?.label ?? "");
   const [runtime, setRuntime] = useState<AgentRuntime>(initial?.runtime ?? "in_app");
   const [appIds, setAppIds] = useState<ReadonlySet<string>>(new Set(initial?.appIds ?? []));
-  const [access, setAccess] = useState<DeclaredAccess>("unknown");
+  const [access, setAccess] = useState<DeclaredAccess>("as_you");
   const [problem, setProblem] = useState<string | null>(null);
   const submit = useWorkspaceChange(api.declareAgent);
 
@@ -100,7 +100,7 @@ export function DeclareAgentForm({
           </select>
         </label>
         <label className="field">
-          <span>Access</span>
+          <span>What it can do</span>
           <select value={access} onChange={(e) => setAccess(e.target.value as DeclaredAccess)}>
             {DECLARED_ACCESS.map((a) => (
               <option key={a} value={a}>
@@ -119,7 +119,6 @@ export function DeclareAgentForm({
           </label>
         ))}
       </fieldset>
-      <p className="muted form-note">Kept in memory until AgentRadius stops. Not verified.</p>
       {error !== null && (
         <p className="inline-error" role="alert">
           {error}

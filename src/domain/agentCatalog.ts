@@ -57,13 +57,17 @@ export const RUNTIME_LABELS: Readonly<Record<AgentRuntime, string>> = {
   unknown: "Not sure",
 };
 
-export const DECLARED_ACCESS = ["read", "read_write", "unknown"] as const;
+/**
+ * `as_you`: in-app assistants act with the signed-in user's permissions, so by default the agent is
+ * assumed to reach whatever you can in each app. `read` and `read_write` are the user's own limits.
+ */
+export const DECLARED_ACCESS = ["as_you", "read", "read_write"] as const;
 export type DeclaredAccess = (typeof DECLARED_ACCESS)[number];
 
 export const ACCESS_LABELS: Readonly<Record<DeclaredAccess, string>> = {
-  read: "Read",
+  as_you: "Whatever you can access (assumed)",
+  read: "Read only",
   read_write: "Read and write",
-  unknown: "Not sure",
 };
 
 export interface AgentPreset {
