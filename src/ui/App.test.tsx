@@ -60,7 +60,7 @@ describe("dashboard shell", () => {
       within(secondary)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Activity log", "Settings"]);
+    ).toEqual(["Settings"]);
   });
 
   it("keeps old links working by sending them where their content moved", () => {
@@ -159,12 +159,7 @@ describe("remediation page", () => {
   });
 });
 
-describe("activity and highlighted paths", () => {
-  it("shows an honest empty activity log", () => {
-    renderAt("activity");
-    expect(screen.getByText(/Nothing yet/)).toBeTruthy();
-  });
-
+describe("highlighted paths", () => {
   it("highlights a finding's evidence path in the graph", () => {
     const finding = data.findings.find((f) => f.pathEdgeIds.length > 0)!;
     renderAt("graph", { path: finding.pathEdgeIds.join(",") });
@@ -223,7 +218,35 @@ describe("blast radius page", () => {
     renderAt("blast-radius", { start: "agent:cursor" });
     expect(await screen.findByText(/not confirmed exploitability/)).toBeTruthy();
     expect(screen.getByText("Resources at risk")).toBeTruthy();
-    expect(screen.getByText("example-org/payments-service")).toBeTruthy();
+    const boxes = ["Can delete, run, or administer", "Can change", "Can read"].map((name) =>
+      screen.getByRole("region", { name }),
+    );
+    const card = boxes
+      .flatMap((b) => within(b).queryAllByText("example-org/payments-service"))
+      .find((el) => el.tagName === "STRONG");
+    expect(card).toBeTruthy();
+    expect(screen.getAllByRole("list", { name: "How it gets there" }).length).toBeGreaterThan(0);
+  });
+
+  it("starts with the riskiest agent and ranks agents instead of a matrix", async () => {
+    renderAt("blast-radius");
+    const ranked = screen.getByRole("heading", { name: "Riskiest agents first" });
+    expect(ranked).toBeTruthy();
+    const pressed = screen.getAllByRole("button", { pressed: true });
+    expect(pressed).toHaveLength(1);
+    expect(await screen.findByText(/were compromised, it could reach/)).toBeTruthy();
+    expect(screen.queryByText("Compare agents")).toBeNull();
+  });
+
+  it("explains why nothing shows instead of a blank page", async () => {
+    const lonely = data.nodes.find(
+      (n) =>
+        ["Agent", "MCPServer", "Application", "Tool"].includes(n.type) &&
+        service.blastRadius(n.id, DEFAULT_ANALYSIS_SETTINGS).impacts.length === 0,
+    )!;
+    renderAt("blast-radius", { start: lonely.id });
+    const why = await screen.findByRole("region", { name: "Why nothing shows" });
+    expect(within(why).getByText(/not what each server or account allows/)).toBeTruthy();
   });
 
   it("simulates a mitigation without claiming anything changed", async () => {

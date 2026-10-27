@@ -59,8 +59,14 @@ export function BlastRadiusPage({ startId }: { startId: string | null }) {
         ),
     [ws.data.nodes],
   );
-  const [mode, setMode] = useState<"one" | "compare">(startId ? "one" : "one");
-  const [start, setStart] = useState(() => startId ?? candidates[0]?.id ?? "");
+  const ranking = useMemo(() => rankAgents(ws.data.reach), [ws.data.reach]);
+  const [start, setStart] = useState(
+    () =>
+      (startId && ws.node(startId) ? startId : null) ??
+      ranking[0]?.agentId ??
+      candidates[0]?.id ??
+      "",
+  );
   const [settings, setSettings] = useState<AnalysisSettings>(ws.data.settings);
   const analysis = useAsyncTask((id: string, s: AnalysisSettings) =>
     api.blastRadius({ startId: id, settings: s }),
@@ -72,10 +78,10 @@ export function BlastRadiusPage({ startId }: { startId: string | null }) {
   const { reset: resetSimulation } = simulation;
 
   useEffect(() => {
-    if (start === "" || mode !== "one") return;
+    if (start === "") return;
     runAnalysis(start, settings);
     resetSimulation();
-  }, [start, settings, mode, runAnalysis, resetSimulation]);
+  }, [start, settings, runAnalysis, resetSimulation]);
 
   const simulate = (changes: ChangeList) => simulation.run(start, changes, settings);
 
@@ -84,57 +90,65 @@ export function BlastRadiusPage({ startId }: { startId: string | null }) {
       <header className="page-header">
         <h2>Blast Radius</h2>
         <p className="muted">
-          What could be affected if one agent, app, or credential were compromised.
+          Pick an agent and see what someone could reach if they took it over.
         </p>
       </header>
-      <div className="toolbar">
-        <div className="segmented" role="radiogroup" aria-label="View">
-          <label>
-            <input
-              type="radio"
-              name="br-mode"
-              checked={mode === "one"}
-              onChange={() => setMode("one")}
-            />
-            One entity
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="br-mode"
-              checked={mode === "compare"}
-              onChange={() => setMode("compare")}
-            />
-            Compare agents
-          </label>
-        </div>
-        {mode === "one" && (
-          <label className="field-inline">
-            <span>Assume compromised</span>
-            <select value={start} onChange={(e) => setStart(e.target.value)}>
-              {NODE_TYPES.filter((t) => START_TYPES.includes(t)).map((t) => (
-                <optgroup key={t} label={TYPE_LABELS[t]}>
-                  {candidates
-                    .filter((n) => n.type === t)
-                    .map((n) => (
-                      <option key={n.id} value={n.id}>
-                        {n.label}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-      {mode === "compare" ? (
-        <AgentComparison />
-      ) : candidates.length === 0 ? (
+      {candidates.length === 0 ? (
         <Empty>
-          Nothing to analyze yet. <a href={href("integrations")}>Add an agent</a> or scan this Mac.
+          Nothing to analyze yet. <a href={href("integrations")}>Add an agent</a> or scan this
+          computer.
         </Empty>
       ) : (
         <>
+          {ranking.length > 0 && (
+            <section aria-labelledby="ranked-title">
+              <h3 id="ranked-title" className="section-title">
+                Riskiest agents first
+              </h3>
+              <ul className="agent-rank">
+                {ranking.map((r, i) => (
+                  <li key={r.agentId}>
+                    <button
+                      type="button"
+                      className="rank-card"
+                      aria-pressed={r.agentId === start}
+                      onClick={() => setStart(r.agentId)}
+                    >
+                      <span className="rank-num" aria-hidden="true">
+                        {i + 1}
+                      </span>
+                      <span className="rank-text">
+                        <strong>{ws.label(r.agentId)}</strong>
+                        <span className="muted">
+                          {r.resources === 0
+                            ? "Reaches nothing we can see"
+                            : `${plural(r.resources, "resource")} · ${r.changeable} it could change`}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <div className="toolbar">
+            <label className="field-inline">
+              <span>Or pick anything</span>
+              <select value={start} onChange={(e) => setStart(e.target.value)}>
+                {NODE_TYPES.filter((t) => START_TYPES.includes(t)).map((t) => (
+                  <optgroup key={t} label={TYPE_LABELS[t]}>
+                    {candidates
+                      .filter((n) => n.type === t)
+                      .map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          </div>
           {analysis.state.status === "loading" && <Loading what="blast radius" />}
           {analysis.state.status === "error" && (
             <ErrorState
@@ -152,11 +166,55 @@ export function BlastRadiusPage({ startId }: { startId: string | null }) {
               onSettings={setSettings}
             />
           )}
+          <RemediateCta />
         </>
       )}
-      {candidates.length > 0 && <RemediateCta />}
     </div>
   );
+}
+
+function rankAgents(reach: WorkspaceResponse["reach"]) {
+  return reach.agentIds
+    .map((agentId) => {
+      const cells = reach.cells.filter((c) => c.agentId === agentId);
+      return {
+        agentId,
+        resources: cells.length,
+        changeable: cells.filter((c) => c.actions.some((a) => a !== "read")).length,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.changeable - a.changeable ||
+        b.resources - a.resources ||
+        a.agentId.localeCompare(b.agentId),
+    );
+}
+
+type Impact = BlastRadiusResponse["impacts"][number];
+
+const BOXES = [
+  {
+    id: "run",
+    title: "Can delete, run, or administer",
+    note: "The most serious: data loss or running code as you.",
+    actions: ["delete", "execute", "admin"],
+  },
+  {
+    id: "change",
+    title: "Can change",
+    note: "Could edit, post, or create things.",
+    actions: ["write"],
+  },
+  { id: "read", title: "Can read", note: "Could see or copy this data.", actions: ["read"] },
+] as const;
+
+/** Each resource goes in the box of the strongest thing that could be done to it. */
+function boxOf(impact: Impact): (typeof BOXES)[number]["id"] | null {
+  const actions = impact.actions.map((a) => a.action);
+  for (const box of BOXES)
+    if (actions.some((a) => (box.actions as readonly string[]).includes(a))) return box.id;
+  return null;
 }
 
 function BlastRadiusResult({
@@ -175,153 +233,133 @@ function BlastRadiusResult({
   onSettings: (s: AnalysisSettings) => void;
 }) {
   const ws = useWorkspace();
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const impacts = [...result.impacts].sort(
     (a, b) =>
       SENSITIVITY_ORDER.indexOf(a.sensitivity) - SENSITIVITY_ORDER.indexOf(b.sensitivity) ||
       a.resourceId.localeCompare(b.resourceId),
   );
-  const modifying = impacts.filter((i) => i.actions.some((a) => a.action !== "read")).length;
-  const boundaries = new Set(result.boundaryCrossings.map((c) => c.toBoundaryId)).size;
+  const unknownReach = result.reached.filter(
+    (r) => r.nodeType === "Resource" && !impacts.some((i) => i.resourceId === r.nodeId),
+  );
+  const changeable = impacts.filter((i) => i.actions.some((a) => a.action !== "read")).length;
   const findings = [...ws.findingsFor(result.startId)].sort((a, b) =>
     compareSeverity(a.severity, b.severity),
   );
   const name = ws.label(result.startId);
-  const uncertain = result.uncertainty.inferredPaths + result.uncertainty.stalePaths;
+  const fixes = result.mitigations.slice(0, 3);
 
   return (
     <>
-      <section className="card summary-card" aria-label="Summary">
+      <section className="card br-hero" aria-label="Summary">
         <p className="summary-sentence">
           {impacts.length === 0 ? (
             <>
-              With the collected data, <strong>{name}</strong> reaches no resources.
+              With what AgentRadius can see, <strong>{name}</strong> reaches none of your data.
             </>
           ) : (
             <>
               If <strong>{name}</strong> were compromised, it could reach{" "}
               <strong>{plural(impacts.length, "resource")}</strong>
-              {modifying > 0 && (
+              {changeable > 0 && (
                 <>
                   {" "}
-                  and change or delete <strong>{modifying}</strong> of them
+                  and change <strong>{changeable}</strong> of them
                 </>
               )}
-              {boundaries > 0 && <>, across {plural(boundaries, "other system")}</>}.
+              .
             </>
           )}
         </p>
-        <p className="muted">
-          This is potential reach, not confirmed exploitation.
-          {uncertain > 0 && <> {plural(uncertain, "path")} rely on inferred or stale evidence.</>}
-        </p>
-        {result.truncated && (
-          <p role="alert" className="warning">
-            Analysis stopped early ({result.truncated.replace("_", " ")}). Results are incomplete.
-          </p>
-        )}
+        <p className="muted">{result.disclaimer}</p>
         {findings.length > 0 && (
           <p className="summary-findings">
-            <SeverityBadge value={findings[0]!.severity} /> {plural(findings.length, "finding")} for{" "}
-            {name}.{" "}
-            <a href={href("remediation", { finding: findings[0]!.id })}>Review in Remediation</a>
+            <SeverityBadge value={findings[0]!.severity} /> {findings[0]!.title}{" "}
+            <a href={href("remediation", { finding: findings[0]!.id })}>Fix it</a>
           </p>
         )}
-        <details className="disclosure">
-          <summary>Assumption</summary>
-          <p>{result.assumption}</p>
-          <p className="muted">{result.disclaimer}</p>
-        </details>
-      </section>
-
-      <section className="card card-flush" aria-labelledby="at-risk">
-        <div className="card-head card-pad">
-          <h3 id="at-risk">Resources at risk</h3>
-        </div>
-        {impacts.length === 0 ? (
-          <div className="card-pad">
-            <Empty>No resources are reachable under the current settings.</Empty>
-          </div>
-        ) : (
-          <div className="table-scroll">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Resource</th>
-                  <th scope="col">Sensitivity</th>
-                  <th scope="col">Could</th>
-                  <th scope="col">Evidence</th>
-                  <th scope="col">
-                    <span className="sr-only">Path</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {impacts.map((impact) => {
-                  const open = expanded === impact.resourceId;
-                  const pathIds = [
-                    ...new Set(impact.actions.flatMap((a) => a.path.steps.map((s) => s.edgeId))),
-                  ];
-                  const evidence = impact.actions
-                    .map((a) => a.path.assertion)
-                    .reduce(weakerAssertion);
-                  return (
-                    <ImpactRow
-                      key={impact.resourceId}
-                      open={open}
-                      onToggle={() => setExpanded(open ? null : impact.resourceId)}
-                      label={ws.label(impact.resourceId)}
-                      sensitivity={impact.sensitivity}
-                      actions={impact.actions.map((a) => ACTION_VERBS[a.action]).join(", ")}
-                      evidence={evidence}
-                      graphHref={href("graph", {
-                        focus: impact.resourceId,
-                        path: pathIds.join(","),
-                      })}
-                    >
-                      {impact.actions.map((a) => (
-                        <div key={a.action}>
-                          <p className="path-title">How it could {ACTION_VERBS[a.action]} this</p>
-                          <PathExplanation
-                            path={a.path}
-                            onSimulateRemove={(edgeId) =>
-                              onSimulate([{ kind: "remove_edge", edgeId }])
-                            }
-                          />
-                        </div>
-                      ))}
-                    </ImpactRow>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        {result.truncated && (
+          <p role="alert" className="warning">
+            The analysis stopped early, so this list is incomplete.
+          </p>
         )}
       </section>
+
+      {impacts.length === 0 ? (
+        <section className="card" aria-label="Why nothing shows">
+          <h3>Why nothing shows</h3>
+          <ul className="plain-list">
+            {unknownReach.length > 0 && (
+              <li>
+                It connects to {unknownReach.map((r) => ws.label(r.nodeId)).join(", ")}, but what it
+                can do there isn&apos;t known.
+              </li>
+            )}
+            <li>
+              AgentRadius sees what is configured on this computer, not what each server or account
+              allows. Servers it doesn&apos;t recognize show no reach.
+            </li>
+            {result.uncertainty.excludedEdges.length > 0 && (
+              <li>
+                {plural(result.uncertainty.excludedEdges.length, "relationship")} weren&apos;t
+                followed because the evidence is too weak. You can include them under Advanced.
+              </li>
+            )}
+          </ul>
+        </section>
+      ) : (
+        <section aria-labelledby="at-risk">
+          <h3 id="at-risk" className="section-title">
+            Resources at risk
+          </h3>
+          <div className="br-boxes">
+            {BOXES.map((box) => {
+              const items = impacts.filter((i) => boxOf(i) === box.id);
+              return (
+                <section key={box.id} className={`br-box br-box-${box.id}`} aria-label={box.title}>
+                  <header>
+                    <h4>{box.title}</h4>
+                    <span className="br-count">{items.length}</span>
+                  </header>
+                  <p className="muted small">{box.note}</p>
+                  {items.length === 0 ? (
+                    <p className="muted small">Nothing here.</p>
+                  ) : (
+                    <ul>
+                      {items.map((impact) => (
+                        <ImpactCard
+                          key={impact.resourceId}
+                          impact={impact}
+                          open={open === impact.resourceId}
+                          onToggle={() =>
+                            setOpen(open === impact.resourceId ? null : impact.resourceId)
+                          }
+                          onSimulate={onSimulate}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <SimulationPanel state={simulation} onClear={onClearSimulation} />
 
-      <section className="card" aria-labelledby="reduce">
-        <h3 id="reduce">Ways to reduce exposure</h3>
-        <p className="card-sub">
-          Each option was measured on an in-memory copy. Preview never changes anything.
-        </p>
-        {result.mitigations.length === 0 ? (
-          <Empty>No single change reduces high-impact reach.</Empty>
-        ) : (
-          <ul className="mitigations">
-            {result.mitigations.map((m) => (
-              <li key={m.id}>
-                <div>
-                  <strong>{m.title}</strong>
-                  <p className="muted">{m.rationale}</p>
-                </div>
-                <span
-                  className="mitigation-effect"
-                  title="Each is one action on one resource, measured on an in-memory copy"
-                >
-                  Removes {m.impactsRemoved} of {m.impactsRemoved + m.impactsRemaining} possible
-                  actions
+      {fixes.length > 0 && (
+        <section aria-labelledby="fix-first">
+          <h3 id="fix-first" className="section-title">
+            Fix these first
+          </h3>
+          <ul className="fix-cards">
+            {fixes.map((m) => (
+              <li key={m.id} className="fix-card">
+                <strong>{m.title}</strong>
+                <span className="muted small">{m.rationale}</span>
+                <span className="fix-effect">
+                  Removes {m.impactsRemoved} of {m.impactsRemoved + m.impactsRemaining} ways in
                 </span>
                 <button
                   type="button"
@@ -333,11 +371,12 @@ function BlastRadiusResult({
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
 
       <details className="card disclosure-card">
-        <summary>Advanced analysis</summary>
+        <summary>Advanced</summary>
+        <p className="muted">{result.assumption}</p>
         <AnalysisSettingsForm settings={settings} onChange={onSettings} />
         <GrantSimulator startId={result.startId} onSimulate={onSimulate} />
         {result.exfiltration.length > 0 && (
@@ -393,49 +432,62 @@ function BlastRadiusResult({
   );
 }
 
-function ImpactRow({
+function ImpactCard({
+  impact,
   open,
   onToggle,
-  label,
-  sensitivity,
-  actions,
-  evidence,
-  graphHref,
-  children,
+  onSimulate,
 }: {
+  impact: Impact;
   open: boolean;
   onToggle: () => void;
-  label: string;
-  sensitivity: string;
-  actions: string;
-  evidence: BlastRadiusResponse["reached"][number]["path"]["assertion"];
-  graphHref: string;
-  children: React.ReactNode;
+  onSimulate: (changes: ChangeList) => void;
 }) {
+  const ws = useWorkspace();
+  const first = impact.actions[0]!;
+  const pathIds = [...new Set(impact.actions.flatMap((a) => a.path.steps.map((s) => s.edgeId)))];
+  const evidence = impact.actions.map((a) => a.path.assertion).reduce(weakerAssertion);
+  const chain = [first.path.steps[0]?.fromId, ...first.path.steps.map((s) => s.toId)].filter(
+    (id): id is string => id !== undefined,
+  );
   return (
-    <>
-      <tr>
-        <th scope="row">{label}</th>
-        <td>
-          <span className={`sensitivity sensitivity-${sensitivity}`}>{sensitivity}</span>
-        </td>
-        <td>{actions}</td>
-        <td>
-          <AssertionBadge value={evidence} />
-        </td>
-        <td className="cell-actions">
-          <button type="button" className="btn-link" aria-expanded={open} onClick={onToggle}>
-            {open ? "Hide path" : "Show path"}
-          </button>{" "}
-          <a href={graphHref}>Open in graph</a>
-        </td>
-      </tr>
-      {open && (
-        <tr className="row-detail">
-          <td colSpan={5}>{children}</td>
-        </tr>
-      )}
-    </>
+    <li className="impact-card">
+      <div className="impact-head">
+        <strong>{ws.label(impact.resourceId)}</strong>
+        {impact.sensitivity !== "unclassified" && (
+          <span className={`sensitivity sensitivity-${impact.sensitivity}`}>
+            {impact.sensitivity}
+          </span>
+        )}
+      </div>
+      <span className="muted small">
+        Could {impact.actions.map((a) => ACTION_VERBS[a.action]).join(", ")}{" "}
+        <AssertionBadge value={evidence} />
+      </span>
+      <ol className="chain" aria-label="How it gets there">
+        {chain.map((id) => (
+          <li key={id}>{ws.label(id)}</li>
+        ))}
+      </ol>
+      <div className="impact-actions">
+        <button type="button" className="btn-link" aria-expanded={open} onClick={onToggle}>
+          {open ? "Hide details" : "Details"}
+        </button>
+        <a href={href("graph", { focus: impact.resourceId, path: pathIds.join(",") })}>
+          Show in graph
+        </a>
+      </div>
+      {open &&
+        impact.actions.map((a) => (
+          <div key={a.action}>
+            <p className="path-title">How it could {ACTION_VERBS[a.action]} this</p>
+            <PathExplanation
+              path={a.path}
+              onSimulateRemove={(edgeId) => onSimulate([{ kind: "remove_edge", edgeId }])}
+            />
+          </div>
+        ))}
+    </li>
   );
 }
 
@@ -478,63 +530,6 @@ function AnalysisSettingsForm({
         />
       </label>
     </form>
-  );
-}
-
-function AgentComparison() {
-  const ws = useWorkspace();
-  const { reach } = ws.data;
-  const cell = new Map(reach.cells.map((c) => [`${c.agentId}|${c.resourceId}`, c]));
-  if (reach.cells.length === 0)
-    return (
-      <Empty>
-        No agent reaches a resource yet. <a href={href("integrations")}>Add an agent</a> AgentRadius
-        can&apos;t detect.
-      </Empty>
-    );
-  return (
-    <section className="card card-flush" aria-label="Agent comparison">
-      <div className="table-scroll matrix-scroll">
-        <table className="table matrix">
-          <thead>
-            <tr>
-              <th scope="col">Resource</th>
-              {reach.agentIds.map((a) => (
-                <th key={a} scope="col">
-                  <a href={href("blast-radius", { start: a })}>{ws.label(a)}</a>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {reach.resourceIds.map((r) => (
-              <tr key={r}>
-                <th scope="row">{ws.label(r)}</th>
-                {reach.agentIds.map((a) => {
-                  const c = cell.get(`${a}|${r}`);
-                  return (
-                    <td key={a}>
-                      {c ? (
-                        <span className="reach-cell">
-                          {c.actions.length > 0
-                            ? c.actions.map((x) => ACTION_VERBS[x]).join(", ")
-                            : "unknown actions"}
-                          <AssertionBadge value={c.assertion} />
-                        </span>
-                      ) : (
-                        <span className="muted" aria-label="No path">
-                          —
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
   );
 }
 
