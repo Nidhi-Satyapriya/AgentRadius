@@ -1,6 +1,7 @@
 import {
   API_PREFIX,
   type ApiErrorBody,
+  type AuthResponse,
   type BlastRadiusRequest,
   type BlastRadiusResponse,
   type DeclareAgentRequest,
@@ -35,7 +36,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   workspace: () => request<WorkspaceResponse>("/workspace"),
   scanThisMac: () => request<WorkspaceResponse>("/scans", { method: "POST", body: "{}" }),
-  useDemo: () => request<WorkspaceResponse>("/demo", { method: "POST", body: "{}" }),
+  auth: () => request<AuthResponse>("/auth"),
+  signOut: () => request<AuthResponse>("/auth/logout", { method: "POST", body: "{}" }),
   blastRadius: (body: BlastRadiusRequest) =>
     request<BlastRadiusResponse>("/blast-radius", { method: "POST", body: JSON.stringify(body) }),
   simulate: (body: SimulationRequest) =>
@@ -45,3 +47,7 @@ export const api = {
   removeAgent: (id: string) =>
     request<WorkspaceResponse>("/agents/remove", { method: "POST", body: JSON.stringify({ id }) }),
 };
+
+/** Full-page navigation to Google; the server sends the browser back here afterwards. */
+export const googleSignInUrl = () =>
+  `${API_PREFIX}/auth/google/start?return=${encodeURIComponent(window.location.origin)}`;

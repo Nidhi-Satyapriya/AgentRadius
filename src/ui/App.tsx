@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { WorkspaceResponse } from "../api/contracts.ts";
 import { api } from "./api.ts";
 import { DataSourceBanner } from "./components/DataSourceBanner.tsx";
+import { AccountMenu } from "./components/AccountMenu.tsx";
 import { NavIcon } from "./components/NavIcon.tsx";
 import { RadiusMark } from "./components/RadiusMark.tsx";
 import { SourceStatus } from "./components/SourceControls.tsx";
@@ -21,6 +22,7 @@ import {
   type Route,
   type RoutePath,
 } from "./routing.ts";
+import { AuthProvider } from "./auth.tsx";
 import { useAsyncTask } from "./useAsync.ts";
 import { WorkspaceProvider } from "./workspace.tsx";
 
@@ -28,7 +30,7 @@ function Page({ route }: { route: Route }) {
   const p = route.params;
   switch (route.path) {
     case "overview":
-      return <OverviewPage />;
+      return <OverviewPage signInFailed={p.get("signin") === "failed"} />;
     case "integrations":
       return <IntegrationsPage selectedId={p.get("source")} />;
     case "graph":
@@ -36,6 +38,7 @@ function Page({ route }: { route: Route }) {
         <GraphPage
           key={p.toString()}
           focusId={p.get("focus")}
+          justScanned={p.get("scanned") === "1"}
           pathEdgeIds={p.get("path")?.split(",").filter(Boolean) ?? []}
           view={p.get("view")}
           sourceId={p.get("source")}
@@ -59,16 +62,18 @@ const focusOnMount = (el: HTMLElement | null) => el?.focus({ preventScroll: true
 function NavList({
   routes,
   current,
+  icons = true,
 }: {
   routes: readonly { path: RoutePath; label: string }[];
   current: RoutePath;
+  icons?: boolean;
 }) {
   return (
     <ul className="nav-list">
       {routes.map((r) => (
         <li key={r.path}>
           <a href={href(r.path)} aria-current={current === r.path ? "page" : undefined}>
-            <NavIcon name={r.path} />
+            {icons && <NavIcon name={r.path} />}
             {r.label}
           </a>
         </li>
@@ -87,35 +92,38 @@ export function Shell({
   onWorkspaceChange?: (next: WorkspaceResponse) => void;
 }) {
   return (
-    <WorkspaceProvider data={data} {...(onWorkspaceChange ? { replace: onWorkspaceChange } : {})}>
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <div className="app">
-        <aside className="sidebar">
-          <a className="brand" href={href("overview")}>
-            <RadiusMark size={24} />
-            <h1>
-              Agent<span>Radius</span>
-            </h1>
-          </a>
-          <nav aria-label="Primary">
-            <NavList routes={PRIMARY_ROUTES} current={route.path} />
-          </nav>
-          <nav aria-label="Secondary" className="nav-secondary">
-            <NavList routes={SECONDARY_ROUTES} current={route.path} />
-          </nav>
-          <SourceStatus />
-        </aside>
-        <div className="workspace">
+    <AuthProvider>
+      <WorkspaceProvider data={data} {...(onWorkspaceChange ? { replace: onWorkspaceChange } : {})}>
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <div className="app">
+          <header className="topbar">
+            <a className="brand" href={href("overview")}>
+              <RadiusMark size={26} />
+              <h1>
+                Agent<span>Radius</span>
+              </h1>
+            </a>
+            <nav aria-label="Primary" className="topnav">
+              <NavList routes={PRIMARY_ROUTES} current={route.path} />
+            </nav>
+            <div className="topbar-end">
+              <nav aria-label="Secondary" className="nav-secondary">
+                <NavList routes={SECONDARY_ROUTES} current={route.path} icons={false} />
+              </nav>
+              <SourceStatus />
+              <AccountMenu />
+            </div>
+          </header>
           <DataSourceBanner data={data} />
           {/* Remounting per route moves focus to the new page for keyboard and screen-reader users. */}
           <main id="main" key={route.path} ref={focusOnMount} tabIndex={-1}>
             <Page route={route} />
           </main>
         </div>
-      </div>
-    </WorkspaceProvider>
+      </WorkspaceProvider>
+    </AuthProvider>
   );
 }
 

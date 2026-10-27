@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import type { WorkspaceResponse } from "../../api/contracts.ts";
 import { api } from "../api.ts";
+import { href } from "../routing.ts";
 import { useAsyncTask } from "../useAsync.ts";
 import { useWorkspace } from "../workspace.tsx";
 
-const SCAN_DISCLOSURE =
+export const SCAN_DISCLOSURE =
   "Reads the MCP config files of Cursor, VS Code, Claude Desktop, Claude Code, and Windsurf. Values are discarded while reading. Nothing is started, changed, saved, or sent.";
 
 /** Display-only relative time; analysis never reads the wall clock. */
@@ -18,15 +19,21 @@ export function timeAgo(iso: string): string {
   return days < 30 ? `${days} days ago` : new Date(iso).toLocaleDateString();
 }
 
-/** Runs a workspace-changing request and swaps the result in. Inert without `replace`. */
+/**
+ * Runs a workspace-changing request and swaps the result in. Inert without `replace`.
+ * `onSuccess` runs before the swap, because the swap remounts the page. Pass a stable function.
+ */
 export function useWorkspaceChange<A extends unknown[]>(
   change: (...args: A) => Promise<WorkspaceResponse>,
+  onSuccess?: () => void,
 ) {
   const { replace } = useWorkspace();
   const { state, run } = useAsyncTask(change);
   useEffect(() => {
-    if (state.status === "success") replace?.(state.data);
-  }, [state, replace]);
+    if (state.status !== "success") return;
+    onSuccess?.();
+    replace?.(state.data);
+  }, [state, replace, onSuccess]);
   return {
     available: replace !== undefined,
     busy: state.status === "loading",
@@ -36,76 +43,53 @@ export function useWorkspaceChange<A extends unknown[]>(
   };
 }
 
-const switchSource = (action: "scan" | "demo") =>
-  action === "scan" ? api.scanThisMac() : api.useDemo();
+const openGraph = () => {
+  window.location.hash = href("graph", { scanned: "1" });
+};
 
-/** Where the data on screen came from, and the one control to change it. */
-export function SourceStatus() {
+/** Scans this Mac, then opens the Permission Graph. */
+export function ScanButton({ className = "btn-primary" }: { className?: string }) {
   const { data } = useWorkspace();
-  const source = useWorkspaceChange(switchSource);
-  const live = data.meta.dataOrigin !== "fixture";
-
-  return (
-    <div className="source-status">
-      <p className={`source-label ${live ? "is-live" : "is-demo"}`}>
-        <span className="status-dot" aria-hidden="true" />
-        <strong>{live ? "LIVE · THIS MAC" : "Demo data"}</strong>
-      </p>
-      <p className="source-sub">
-        {live ? `Synced ${timeAgo(data.meta.collectedAt)}` : "Reads local MCP config files only."}
-      </p>
-      {source.available && (
-        <div className="source-actions">
-          <button
-            type="button"
-            className={live ? "btn-secondary" : "btn-primary"}
-            onClick={() => source.run("scan")}
-            disabled={source.busy}
-            title={SCAN_DISCLOSURE}
-          >
-            {source.busy ? "Scanning…" : live ? "Sync now" : "Scan this Mac"}
-          </button>
-          {live && (
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => source.run("demo")}
-              disabled={source.busy}
-            >
-              Use demo data
-            </button>
-          )}
-        </div>
-      )}
-      {source.error !== null && (
-        <p className="inline-error" role="alert">
-          {source.error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Re-reads this Mac's sources. Used where a single source is being inspected. */
-export function SyncButton() {
-  const source = useWorkspaceChange(api.scanThisMac);
-  if (!source.available) return null;
+  const scan = useWorkspaceChange(api.scanThisMac, openGraph);
+  if (!scan.available) return null;
   return (
     <>
       <button
         type="button"
-        className="btn-primary"
-        onClick={() => source.run()}
-        disabled={source.busy}
+        className={className}
+        onClick={() => scan.run()}
+        disabled={scan.busy}
         title={SCAN_DISCLOSURE}
       >
-        {source.busy ? "Syncing…" : "Sync"}
+        {scan.busy ? "Scanning…" : data.scannedAt ? "Scan again" : "Scan this Mac"}
       </button>
-      {source.error !== null && (
+      {scan.error !== null && (
         <span className="inline-error" role="alert">
-          {source.error}
+          {scan.error}
         </span>
       )}
     </>
+  );
+}
+
+/** Where the data on screen came from. */
+export function SourceStatus() {
+  const { data } = useWorkspace();
+  const live = data.scannedAt !== null;
+  return (
+    <span
+      className={`source-pill ${live ? "is-live" : "is-idle"}`}
+      title={live ? SCAN_DISCLOSURE : "This Mac hasn't been scanned yet."}
+    >
+      <span className="status-dot" aria-hidden="true" />
+      {live ? (
+        <>
+          <strong>LIVE · THIS MAC</strong>
+          <span className="muted">{timeAgo(data.scannedAt!)}</span>
+        </>
+      ) : (
+        <span>Not scanned yet</span>
+      )}
+    </span>
   );
 }

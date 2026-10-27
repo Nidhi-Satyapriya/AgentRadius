@@ -7,11 +7,13 @@ import {
   type NodeType,
 } from "../../domain/core.ts";
 import { AssertionBadge, ConfidenceBadge } from "../components/Badges.tsx";
+import { RemediateCta } from "../components/RemediateCta.tsx";
+import { ScanButton } from "../components/SourceControls.tsx";
 import { Empty } from "../components/States.tsx";
 import { EntityPanel } from "../graph/EntityPanel.tsx";
 import { GraphCanvas, type Selection } from "../graph/GraphCanvas.tsx";
 import { PermissionsView } from "../graph/PermissionsView.tsx";
-import { TYPE_LABELS, TYPE_MEANINGS } from "../labels.ts";
+import { ACTION_VERBS, plural, TYPE_LABELS, TYPE_MEANINGS } from "../labels.ts";
 import { href } from "../routing.ts";
 import { useWorkspace } from "../workspace.tsx";
 
@@ -30,13 +32,51 @@ function toggle<T>(set: ReadonlySet<T>, value: T): Set<T> {
   return next;
 }
 
-export function GraphPage({
+export function GraphPage(props: {
+  focusId: string | null;
+  justScanned?: boolean;
+  pathEdgeIds?: readonly string[];
+  view?: string | null;
+  sourceId?: string | null;
+}) {
+  const ws = useWorkspace();
+  if (ws.data.nodes.length === 0)
+    return (
+      <div className="page">
+        <header className="page-header">
+          <h2>Permission Graph</h2>
+          <p className="muted">
+            Who has access, what they can reach, and how that access connects.
+          </p>
+        </header>
+        <section className="card empty-hero">
+          <h3>Nothing to map yet</h3>
+          <p className="muted">
+            {props.justScanned
+              ? "The scan found no MCP servers in the supported clients on this Mac. Add the agents you use in other apps to map them."
+              : "Add the AI agents you use, or scan this Mac. AgentRadius shows no sample data."}
+          </p>
+          <div className="scan-actions">
+            <a className="btn-secondary" href={href("integrations")}>
+              Add agents
+            </a>
+            <ScanButton />
+          </div>
+        </section>
+      </div>
+    );
+  return <MapView {...props} />;
+}
+
+function MapView({
   focusId,
+  justScanned = false,
   pathEdgeIds = [],
   view: initialView = null,
   sourceId = null,
 }: {
   focusId: string | null;
+  justScanned?: boolean;
   pathEdgeIds?: readonly string[];
   view?: string | null;
   sourceId?: string | null;
@@ -137,6 +177,40 @@ export function GraphPage({
         <h2>Permission Graph</h2>
         <p className="muted">Who has access, what they can reach, and how that access connects.</p>
       </header>
+
+      {justScanned && (
+        <div className="scan-done" role="status">
+          <strong>Scan complete.</strong> Mapped{" "}
+          {plural(ws.data.nodes.filter((n) => n.type !== "TrustBoundary").length, "item")} from what
+          was found and added. Blast radius and findings are below.
+        </div>
+      )}
+
+      <ol className="read-guide" aria-label="How to read this map">
+        <li>
+          <i className="legend-swatch node-swatch-Agent" aria-hidden="true" />
+          <strong>Agents &amp; apps</strong>
+          <span>who acts</span>
+        </li>
+        <li>
+          <i className="legend-swatch node-swatch-MCPServer" aria-hidden="true" />
+          <strong>Servers &amp; tools</strong>
+          <span>what they connect to</span>
+        </li>
+        <li>
+          <i className="legend-swatch node-swatch-CredentialReference" aria-hidden="true" />
+          <strong>Credentials &amp; grants</strong>
+          <span>the access they carry</span>
+        </li>
+        <li>
+          <i className="legend-swatch node-swatch-Resource" aria-hidden="true" />
+          <strong>Your data</strong>
+          <span>what could be affected</span>
+        </li>
+        <li className="read-guide-tip">
+          Access flows left to right. Click any box to see where its access comes from.
+        </li>
+      </ol>
 
       <div className="tabs" role="tablist" aria-label="View">
         {VIEWS.map((v) => (
@@ -266,7 +340,99 @@ export function GraphPage({
           {view === "graph" && <Legend types={presentTypes.filter((t) => types.has(t))} />}
         </>
       )}
+
+      <ReachPanel selectedId={selection?.kind === "node" ? selection.id : null} />
+      <RemediateCta />
     </div>
+  );
+}
+
+const REACH_LIMIT = 6;
+
+/** Blast radius at a glance, from the reach summary the workspace already computed. */
+function ReachPanel({ selectedId }: { selectedId: string | null }) {
+  const ws = useWorkspace();
+  const { reach } = ws.data;
+  const byAgent = useMemo(() => {
+    const m = new Map<string, (typeof reach.cells)[number][]>();
+    for (const c of reach.cells) m.set(c.agentId, [...(m.get(c.agentId) ?? []), c]);
+    return m;
+  }, [reach.cells]);
+  const widest = [...reach.agentIds].sort(
+    (a, b) => (byAgent.get(b)?.length ?? 0) - (byAgent.get(a)?.length ?? 0) || a.localeCompare(b),
+  )[0];
+  const [picked, setPicked] = useState<string | null>(null);
+  const agentId =
+    (selectedId && reach.agentIds.includes(selectedId) ? selectedId : null) ?? picked ?? widest;
+  if (agentId === undefined) return null;
+  const cells = byAgent.get(agentId) ?? [];
+  const modifying = cells.filter((c) => c.actions.some((a) => a !== "read")).length;
+  const name = ws.label(agentId);
+
+  return (
+    <section className="card reach-panel" aria-labelledby="reach-title">
+      <div className="card-head">
+        <h3 id="reach-title">Blast radius</h3>
+        <a href={href("blast-radius", { start: agentId })}>Full analysis for {name} →</a>
+      </div>
+      {reach.agentIds.length > 1 && (
+        <div className="chip-row" role="group" aria-label="Agent">
+          {reach.agentIds.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className="chip"
+              aria-pressed={id === agentId}
+              onClick={() => setPicked(id)}
+            >
+              {ws.label(id)}
+              <span className="chip-count">{byAgent.get(id)?.length ?? 0}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="summary-sentence">
+        {cells.length === 0 ? (
+          <>
+            With the collected data, <strong>{name}</strong> reaches none of your data.
+          </>
+        ) : (
+          <>
+            If <strong>{name}</strong> were compromised, it could reach{" "}
+            <strong>{plural(cells.length, "resource")}</strong>
+            {modifying > 0 && (
+              <>
+                {" "}
+                and change <strong>{modifying}</strong> of them
+              </>
+            )}
+            .
+          </>
+        )}
+      </p>
+      {cells.length > 0 && (
+        <ul className="reach-list">
+          {cells.slice(0, REACH_LIMIT).map((c) => (
+            <li key={c.resourceId}>
+              <a href={href("graph", { focus: c.resourceId })}>{ws.label(c.resourceId)}</a>
+              <span className="muted">
+                {c.actions.length > 0
+                  ? c.actions.map((a) => ACTION_VERBS[a]).join(", ")
+                  : "unknown actions"}
+              </span>
+              <AssertionBadge value={c.assertion} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {cells.length > REACH_LIMIT && (
+        <p className="muted small">
+          And {cells.length - REACH_LIMIT} more on the{" "}
+          <a href={href("blast-radius", { start: agentId })}>Blast Radius</a> page.
+        </p>
+      )}
+      <p className="muted small">Potential reach, not confirmed exploitation.</p>
+    </section>
   );
 }
 

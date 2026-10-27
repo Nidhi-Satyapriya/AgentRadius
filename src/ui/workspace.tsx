@@ -4,7 +4,7 @@ import type { Finding, GraphEdge, GraphNode } from "../domain/index.ts";
 
 export interface WorkspaceModel {
   readonly data: WorkspaceResponse;
-  /** Swaps in a new workspace (after a scan or a switch to demo data); absent in static renders. */
+  /** Swaps in a new workspace (after a scan or an added or removed agent); absent in static renders. */
   readonly replace?: (next: WorkspaceResponse) => void;
   readonly node: (id: string) => GraphNode | undefined;
   readonly edge: (id: string) => GraphEdge | undefined;

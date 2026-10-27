@@ -11,20 +11,18 @@ import type { WorkspaceModel } from "./workspace.tsx";
 type ConnectorRun = WorkspaceResponse["connectorRuns"][number];
 type DeclaredAgent = WorkspaceResponse["declaredAgents"][number];
 
-export const CATEGORIES = ["local", "declared", "account", "demo"] as const;
+export const CATEGORIES = ["local", "declared", "demo"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   local: "On this Mac",
   declared: "Added by you",
-  account: "Accounts",
   demo: "Demo",
 };
 
 export type IntegrationRow =
   | (Base & { readonly kind: "source"; readonly run: ConnectorRun })
-  | (Base & { readonly kind: "declared"; readonly agent: DeclaredAgent })
-  | (Base & { readonly kind: "account"; readonly covers: string });
+  | (Base & { readonly kind: "declared"; readonly agent: DeclaredAgent });
 
 interface Base {
   readonly id: string;
@@ -37,16 +35,6 @@ interface Base {
   readonly found: number | null;
   readonly risk: Severity | null;
 }
-
-/** Account providers whose sign-in is not built yet. Listed so users know where they stand. */
-const ACCOUNTS: readonly { id: string; name: string; covers: string }[] = [
-  { id: "account:github", name: "GitHub", covers: "Repositories, tokens, and app installs" },
-  { id: "account:atlassian", name: "Atlassian", covers: "Confluence spaces and Jira projects" },
-  { id: "account:google", name: "Google Workspace", covers: "Gmail, Calendar, and Drive grants" },
-  { id: "account:microsoft", name: "Microsoft 365", covers: "Outlook, Teams, and SharePoint" },
-  { id: "account:slack", name: "Slack", covers: "Workspace apps and bot scopes" },
-  { id: "account:aws", name: "AWS", covers: "IAM roles and policies" },
-];
 
 const STATUS: Readonly<Record<ConnectorStatus, Base["status"]>> = {
   completed: { label: "Read", tone: "ok" },
@@ -118,20 +106,7 @@ export function integrationRows(ws: WorkspaceModel): IntegrationRow[] {
     risk: riskOf([agent.id]),
   }));
 
-  const accounts: IntegrationRow[] = ACCOUNTS.map((a) => ({
-    kind: "account",
-    covers: a.covers,
-    id: a.id,
-    name: a.name,
-    category: "account",
-    status: { label: "Not available", tone: "neutral" },
-    auth: "—",
-    lastSync: null,
-    found: null,
-    risk: null,
-  }));
-
-  return [...sources, ...declared, ...accounts];
+  return [...sources, ...declared];
 }
 
 export function monogram(label: string): string {

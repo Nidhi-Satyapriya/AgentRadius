@@ -5,7 +5,6 @@ type Entry = WorkspaceModel["data"]["activity"][number];
 
 const ACTION_LABELS: Record<Entry["action"], string> = {
   scan: "Synced this Mac",
-  use_demo: "Switched to demo data",
   add_agent: "Added an agent",
   remove_agent: "Removed an agent",
 };

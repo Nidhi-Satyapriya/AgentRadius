@@ -16,6 +16,7 @@ import {
 import { api } from "../api.ts";
 import { AssertionBadge, EnforcementBadge, SeverityBadge } from "../components/Badges.tsx";
 import { PathExplanation } from "../components/PathExplanation.tsx";
+import { RemediateCta } from "../components/RemediateCta.tsx";
 import { Empty, ErrorState, Loading } from "../components/States.tsx";
 import { ACTION_VERBS, plural, TYPE_LABELS } from "../labels.ts";
 import { href } from "../routing.ts";
@@ -153,6 +154,7 @@ export function BlastRadiusPage({ startId }: { startId: string | null }) {
           )}
         </>
       )}
+      {candidates.length > 0 && <RemediateCta />}
     </div>
   );
 }

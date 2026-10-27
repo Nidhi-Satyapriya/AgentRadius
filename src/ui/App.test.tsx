@@ -5,10 +5,19 @@ import { DEFAULT_ANALYSIS_SETTINGS } from "../analysis/index.ts";
 import { createDemoWorkspaceService, createWorkspaceSession } from "../application/workspace.ts";
 import { scanForSecrets } from "../redaction/index.ts";
 import { Shell } from "./App.tsx";
-import { parseHash, PRIMARY_ROUTES, ROUTES, type Route, type RoutePath } from "./routing.ts";
+import { href, parseHash, PRIMARY_ROUTES, ROUTES, type Route, type RoutePath } from "./routing.ts";
 
 const service = createDemoWorkspaceService();
 const data = service.view(DEFAULT_ANALYSIS_SETTINGS);
+const empty = createWorkspaceSession(async () => ({}))
+  .current()
+  .view(DEFAULT_ANALYSIS_SETTINGS);
+const SIGN_IN_OFF = {
+  provider: "google",
+  configured: false,
+  redirectUri: "http://127.0.0.1:4317/api/v1/auth/google/callback",
+  user: null,
+};
 
 function renderAt(path: RoutePath, params: Record<string, string> = {}) {
   const route: Route = { path, params: new URLSearchParams(params) };
@@ -20,9 +29,11 @@ function stubApi() {
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body ?? "{}"));
     const settings = body.settings ?? DEFAULT_ANALYSIS_SETTINGS;
-    const payload = url.endsWith("/blast-radius")
-      ? service.blastRadius(body.startId, settings)
-      : service.simulate(body.startId, body.changes, settings);
+    const payload = url.endsWith("/auth")
+      ? SIGN_IN_OFF
+      : url.endsWith("/blast-radius")
+        ? service.blastRadius(body.startId, settings)
+        : service.simulate(body.startId, body.changes, settings);
     return { ok: true, status: 200, json: async () => payload };
   });
 }
@@ -69,6 +80,7 @@ describe("dashboard shell", () => {
       ...data,
       findings: [],
       meta: { ...data.meta, dataOrigin: "local_discovery" as const, snapshotId: "local:x" },
+      scannedAt: data.meta.collectedAt,
     };
     const route = (path: RoutePath): Route => ({ path, params: new URLSearchParams() });
     const { unmount } = render(<Shell data={live} route={route("overview")} />);
@@ -91,7 +103,8 @@ describe("dashboard shell", () => {
 describe("integrations page", () => {
   it("adds an undetectable agent from a preset", async () => {
     const session = createWorkspaceSession(async () => ({}));
-    vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/auth")) return { ok: true, status: 200, json: async () => SIGN_IN_OFF };
       session.declareAgent(JSON.parse(String(init?.body)));
       return {
         ok: true,
@@ -107,9 +120,8 @@ describe("integrations page", () => {
         onWorkspaceChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
-    const form = screen.getByRole("form", { name: "Add an agent" });
-    fireEvent.change(within(form).getByLabelText("Agent"), { target: { value: "notion-ai" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add Notion AI" }));
+    const form = screen.getByRole("form", { name: "Add Notion AI" });
     expect(within(form).getByLabelText("Notion")).toHaveProperty("checked", true);
     fireEvent.click(within(form).getByRole("button", { name: "Add agent" }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
@@ -117,20 +129,18 @@ describe("integrations page", () => {
     expect(next.declaredAgents.map((a) => a.name)).toEqual(["Notion AI"]);
   });
 
-  it("never shows an account as connected when sign-in isn't built", () => {
-    renderAt("integrations", { source: "account:github" });
+  it("lists only what was added or scanned, with no placeholder accounts", () => {
+    renderAt("integrations");
     const table = screen.getByRole("table");
     expect(within(table).queryByText(/connected/i)).toBeNull();
-    const panel = screen.getByRole("complementary", { name: "GitHub details" });
-    expect(within(panel).getByText("Not available")).toBeTruthy();
-    expect(within(panel).getByText(/sign-in isn.t built yet/)).toBeTruthy();
+    expect(within(table).queryByText("Google Workspace")).toBeNull();
   });
 
   it("narrows the list by search", () => {
     renderAt("integrations");
     const before = within(screen.getByRole("table")).getAllByRole("row").length;
     fireEvent.change(screen.getByRole("searchbox", { name: "Search integrations" }), {
-      target: { value: "slack" },
+      target: { value: data.connectorRuns[0]!.label },
     });
     expect(within(screen.getByRole("table")).getAllByRole("row").length).toBeLessThan(before);
   });
@@ -234,5 +244,68 @@ describe("blast radius page", () => {
     await waitFor(() =>
       expect(within(result).getByText(/Added a hypothetical relationship/)).toBeTruthy(),
     );
+  });
+});
+
+describe("starting empty", () => {
+  const at = (path: RoutePath, d = empty, onChange?: (n: typeof data) => void) =>
+    render(
+      <Shell
+        data={d}
+        route={{ path, params: new URLSearchParams() }}
+        {...(onChange ? { onWorkspaceChange: onChange } : {})}
+      />,
+    );
+
+  it("introduces AgentRadius and points to setup without showing any sample data", () => {
+    at("overview");
+    expect(screen.queryByText("DEMO FIXTURE")).toBeNull();
+    expect(screen.getByRole("heading", { name: /See everything your AI agents/ })).toBeTruthy();
+    const cta = screen.getByRole("link", { name: /Integrate your AgentRadius setup/ });
+    expect(cta.getAttribute("href")).toBe(href("integrations"));
+    expect(screen.queryByText("Your workspace")).toBeNull();
+    expect(screen.getByText("Not scanned yet")).toBeTruthy();
+  });
+
+  it("shows empty integrations and an empty map with next steps", () => {
+    const { unmount } = at("integrations");
+    expect(screen.getByText(/Nothing added yet/)).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+    unmount();
+    at("graph");
+    expect(screen.getByText("Nothing to map yet")).toBeTruthy();
+  });
+
+  it("opens the Permission Graph after a scan", async () => {
+    vi.stubGlobal("fetch", async (url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.endsWith("/auth") ? SIGN_IN_OFF : data),
+    }));
+    window.location.hash = "#/integrations";
+    const onChange = vi.fn();
+    at("integrations", empty, onChange);
+    fireEvent.click(screen.getByRole("button", { name: "Scan this Mac" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(window.location.hash).toBe(href("graph", { scanned: "1" }));
+  });
+
+  it("offers optional Google sign-in and explains setup when it isn't configured", async () => {
+    at("settings");
+    expect((await screen.findAllByRole("link", { name: /Sign in with Google/ })).length).toBe(1);
+    expect(screen.getByText(/AGENTRADIUS_GOOGLE_CLIENT_ID/)).toBeTruthy();
+    expect(screen.getByText(SIGN_IN_OFF.redirectUri)).toBeTruthy();
+    expect(screen.getByText(/requests no\s+access to Gmail/)).toBeTruthy();
+  });
+});
+
+describe("map to blast radius to remediation", () => {
+  it("shows an agent's blast radius under the graph and hands off to remediation", () => {
+    renderAt("graph");
+    const panel = screen.getByRole("region", { name: "Blast radius" });
+    expect(within(panel).getByText(/were compromised, it could reach/)).toBeTruthy();
+    expect(within(panel).getByText(/not confirmed exploitation/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Remediate \d+ findings?/ })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "How to read this map" })).toBeTruthy();
   });
 });

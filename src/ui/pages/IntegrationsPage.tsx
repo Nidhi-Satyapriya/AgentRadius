@@ -1,9 +1,20 @@
 import { useCallback, useMemo, useState } from "react";
-import { ACCESS_LABELS, catalogApp, RUNTIME_LABELS } from "../../domain/core.ts";
+import {
+  ACCESS_LABELS,
+  AGENT_PRESETS,
+  catalogApp,
+  DECLARED_CONNECTOR_ID,
+  RUNTIME_LABELS,
+} from "../../domain/core.ts";
 import { api } from "../api.ts";
 import { SeverityBadge } from "../components/Badges.tsx";
 import { DeclareAgentForm } from "../components/DeclareAgentForm.tsx";
-import { SyncButton, timeAgo, useWorkspaceChange } from "../components/SourceControls.tsx";
+import {
+  SCAN_DISCLOSURE,
+  ScanButton,
+  timeAgo,
+  useWorkspaceChange,
+} from "../components/SourceControls.tsx";
 import { Empty } from "../components/States.tsx";
 import {
   CATEGORIES,
@@ -14,118 +25,255 @@ import {
   type Category,
   type IntegrationRow,
 } from "../integrations.ts";
+import { plural } from "../labels.ts";
 import { href } from "../routing.ts";
 import { useWorkspace } from "../workspace.tsx";
+
+const CUSTOM = "custom";
 
 export function IntegrationsPage({ selectedId }: { selectedId: string | null }) {
   const ws = useWorkspace();
   const rows = useMemo(() => integrationRows(ws), [ws]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | "all">("all");
-  const [adding, setAdding] = useState(false);
-  const closeForm = useCallback(() => setAdding(false), []);
+  const [adding, setAdding] = useState<string | null>(null);
+  const closeForm = useCallback(() => setAdding(null), []);
   const present = CATEGORIES.filter((c) => rows.some((r) => r.category === c));
   const q = query.trim().toLowerCase();
   const visible = rows.filter(
     (r) => (category === "all" || r.category === category) && r.name.toLowerCase().includes(q),
   );
   const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const addedNames = new Set(ws.data.declaredAgents.map((a) => a.name));
+  const agentsAdded = ws.data.declaredAgents.length;
+  const scanned = ws.data.scannedAt !== null;
+  const scannedSources = ws.data.connectorRuns.filter(
+    (r) => r.connectorId !== DECLARED_CONNECTOR_ID,
+  ).length;
 
   return (
     <div className="page">
-      <header className="page-header page-header-row">
-        <div>
-          <h2>Integrations</h2>
-          <p className="muted">
-            Every source of access data, and agents you add by hand. Local sources read files on
-            this Mac only and change nothing.
-          </p>
-        </div>
-        {ws.replace && !adding && (
-          <button type="button" className="btn-primary" onClick={() => setAdding(true)}>
-            Add agent
-          </button>
-        )}
+      <header className="page-header">
+        <h2>Integrate your setup</h2>
+        <p className="muted">
+          Add the AI agents you use, then scan this Mac. Only what you add or scan shows up here.
+          Local sources read files on this Mac only and change nothing.
+        </p>
       </header>
-      {adding && <DeclareAgentForm onClose={closeForm} />}
 
-      <div className="toolbar">
-        <label className="search">
-          <span className="sr-only">Search integrations</span>
-          <input
-            type="search"
-            placeholder="Search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <div className="segmented" role="radiogroup" aria-label="Category">
-          {(["all", ...present] as const).map((c) => (
-            <label key={c}>
-              <input
-                type="radio"
-                name="integration-category"
-                checked={category === c}
-                onChange={() => setCategory(c)}
-              />
-              {c === "all" ? "All" : CATEGORY_LABELS[c]}
-            </label>
-          ))}
-        </div>
-      </div>
+      <ol className="setup-steps" aria-label="Setup steps">
+        <li className={agentsAdded > 0 ? "is-done" : "is-current"}>
+          <span className="step-num" aria-hidden="true">
+            1
+          </span>
+          <div>
+            <strong>Add your agents</strong>
+            <span className="muted">
+              {agentsAdded > 0 ? `${plural(agentsAdded, "agent")} added` : "Pick from the list"}
+            </span>
+          </div>
+        </li>
+        <li className={scanned ? "is-done" : agentsAdded > 0 ? "is-current" : ""}>
+          <span className="step-num" aria-hidden="true">
+            2
+          </span>
+          <div>
+            <strong>Scan this Mac</strong>
+            <span className="muted">
+              {scanned ? `Scanned ${timeAgo(ws.data.scannedAt!)}` : "Finds MCP servers"}
+            </span>
+          </div>
+        </li>
+        <li className={scanned ? "is-current" : ""}>
+          <span className="step-num" aria-hidden="true">
+            3
+          </span>
+          <div>
+            <strong>See your map</strong>
+            <span className="muted">
+              {scanned || agentsAdded > 0 ? (
+                <a href={href("graph")}>Open the Permission Graph</a>
+              ) : (
+                "Opens after the scan"
+              )}
+            </span>
+          </div>
+        </li>
+      </ol>
 
-      <div className={`split ${selected ? "has-panel" : ""}`}>
-        <div className="card card-flush">
-          {visible.length === 0 ? (
-            <Empty>No integrations match.</Empty>
+      <div className="integrate-grid">
+        <section className="card" aria-labelledby="catalog-title">
+          <div className="card-head">
+            <h3 id="catalog-title">Add agents one by one</h3>
+            <span className="muted small">Kept in memory · not verified</span>
+          </div>
+          <p className="muted">
+            For assistants that live inside apps, which a scan of this Mac can&apos;t see. Choose
+            one, confirm what it can reach, and add it.
+          </p>
+          {ws.replace && adding !== null ? (
+            <DeclareAgentForm
+              key={adding}
+              onClose={closeForm}
+              {...(adding !== CUSTOM ? { initialPresetId: adding } : {})}
+            />
           ) : (
-            <div className="table-scroll">
-              <table className="table table-rows">
-                <caption className="sr-only">Integrations</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Access method</th>
-                    <th scope="col">Last synced</th>
-                    <th scope="col">Found</th>
-                    <th scope="col">Risk</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((r) => (
-                    <tr key={r.id} className={r.id === selectedId ? "is-selected" : ""}>
-                      <th scope="row">
-                        <a
-                          className="row-link"
-                          href={href("integrations", { source: r.id })}
-                          aria-current={r.id === selectedId ? "true" : undefined}
-                        >
-                          <span className="app-icon" aria-hidden="true">
-                            {monogram(r.name)}
-                          </span>
-                          <span>
-                            {r.name}
-                            <span className="row-sub">{CATEGORY_LABELS[r.category]}</span>
-                          </span>
-                        </a>
-                      </th>
-                      <td>
-                        <StatusPill status={r.status} />
-                      </td>
-                      <td>{r.auth}</td>
-                      <td>{r.lastSync ? timeAgo(r.lastSync) : "—"}</td>
-                      <td>{r.found ?? "—"}</td>
-                      <td>{r.risk ? <SeverityBadge value={r.risk} /> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="agent-catalog">
+              {AGENT_PRESETS.map((p) => {
+                const added = addedNames.has(p.label);
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className={`agent-tile ${added ? "is-added" : ""}`}
+                      onClick={() => setAdding(p.id)}
+                      disabled={!ws.replace}
+                      aria-label={added ? `${p.label} (added)` : `Add ${p.label}`}
+                    >
+                      <span className="app-icon" aria-hidden="true">
+                        {monogram(p.label)}
+                      </span>
+                      <span className="agent-tile-text">
+                        <strong>{p.label}</strong>
+                        <span className="muted">
+                          {p.appIds.map((id) => catalogApp(id)?.label ?? id).join(", ")}
+                        </span>
+                      </span>
+                      <span className="agent-tile-action" aria-hidden="true">
+                        {added ? "✓ Added" : "+ Add"}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+              <li>
+                <button
+                  type="button"
+                  className="agent-tile is-custom"
+                  onClick={() => setAdding(CUSTOM)}
+                  disabled={!ws.replace}
+                >
+                  <span className="app-icon" aria-hidden="true">
+                    +
+                  </span>
+                  <span className="agent-tile-text">
+                    <strong>Custom agent</strong>
+                    <span className="muted">Name it and choose its apps</span>
+                  </span>
+                </button>
+              </li>
+            </ul>
           )}
-        </div>
-        {selected && <IntegrationPanel row={selected} />}
+        </section>
+
+        <section className="card scan-card" aria-labelledby="scan-title">
+          <span className="scan-visual" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <h3 id="scan-title">{scanned ? "This Mac is mapped" : "Scan this Mac"}</h3>
+          <p className="muted">{SCAN_DISCLOSURE}</p>
+          <div className="scan-actions">
+            <ScanButton />
+          </div>
+          {scanned && (
+            <p className="small muted">
+              {plural(scannedSources, "source")} read {timeAgo(ws.data.scannedAt!)}.{" "}
+              <a href={href("graph")}>Open the map</a>
+            </p>
+          )}
+        </section>
       </div>
+
+      <h3 className="section-title">Your integrations</h3>
+      {rows.length === 0 ? (
+        <div className="card">
+          <Empty>
+            Nothing added yet. Add an agent or scan this Mac. AgentRadius shows no sample data.
+          </Empty>
+        </div>
+      ) : (
+        <>
+          <div className="toolbar">
+            <label className="search">
+              <span className="sr-only">Search integrations</span>
+              <input
+                type="search"
+                placeholder="Search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <div className="segmented" role="radiogroup" aria-label="Category">
+              {(["all", ...present] as const).map((c) => (
+                <label key={c}>
+                  <input
+                    type="radio"
+                    name="integration-category"
+                    checked={category === c}
+                    onChange={() => setCategory(c)}
+                  />
+                  {c === "all" ? "All" : CATEGORY_LABELS[c]}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className={`split ${selected ? "has-panel" : ""}`}>
+            <div className="card card-flush">
+              {visible.length === 0 ? (
+                <Empty>No integrations match.</Empty>
+              ) : (
+                <div className="table-scroll">
+                  <table className="table table-rows">
+                    <caption className="sr-only">Integrations</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Access method</th>
+                        <th scope="col">Last synced</th>
+                        <th scope="col">Found</th>
+                        <th scope="col">Risk</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.map((r) => (
+                        <tr key={r.id} className={r.id === selectedId ? "is-selected" : ""}>
+                          <th scope="row">
+                            <a
+                              className="row-link"
+                              href={href("integrations", { source: r.id })}
+                              aria-current={r.id === selectedId ? "true" : undefined}
+                            >
+                              <span className="app-icon" aria-hidden="true">
+                                {monogram(r.name)}
+                              </span>
+                              <span>
+                                {r.name}
+                                <span className="row-sub">{CATEGORY_LABELS[r.category]}</span>
+                              </span>
+                            </a>
+                          </th>
+                          <td>
+                            <StatusPill status={r.status} />
+                          </td>
+                          <td>{r.auth}</td>
+                          <td>{r.lastSync ? timeAgo(r.lastSync) : "—"}</td>
+                          <td>{r.found ?? "—"}</td>
+                          <td>{r.risk ? <SeverityBadge value={r.risk} /> : "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            {selected && <IntegrationPanel row={selected} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -156,15 +304,6 @@ function IntegrationPanel({ row }: { row: IntegrationRow }) {
       </div>
       {row.kind === "source" && <SourceDetails row={row} />}
       {row.kind === "declared" && <DeclaredDetails row={row} />}
-      {row.kind === "account" && (
-        <>
-          <p>Would cover: {row.covers}.</p>
-          <p className="muted">
-            Account sign-in isn&apos;t built yet, so nothing is read from {row.name}. To include an
-            assistant that uses it, choose <strong className="text">Add agent</strong>.
-          </p>
-        </>
-      )}
     </aside>
   );
 }
@@ -192,7 +331,7 @@ function SourceDetails({ row }: { row: Extract<IntegrationRow, { kind: "source" 
         </div>
       )}
       <div className="panel-actions">
-        {row.category === "local" && <SyncButton />}
+        {row.category === "local" && <ScanButton className="btn-secondary" />}
         {row.found !== null && row.found > 0 && (
           <a className="btn-secondary" href={href("graph", { source: run.connectorId })}>
             View permissions

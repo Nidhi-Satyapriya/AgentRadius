@@ -13,12 +13,19 @@ import { api } from "../api.ts";
 import { useWorkspaceChange } from "./SourceControls.tsx";
 
 /** Lets the user describe an agent that discovery cannot see. Nothing is contacted or verified. */
-export function DeclareAgentForm({ onClose }: { onClose: () => void }) {
+export function DeclareAgentForm({
+  onClose,
+  initialPresetId = "",
+}: {
+  onClose: () => void;
+  initialPresetId?: string;
+}) {
   const ids = useId();
-  const [presetId, setPresetId] = useState("");
-  const [name, setName] = useState("");
-  const [runtime, setRuntime] = useState<AgentRuntime>("in_app");
-  const [appIds, setAppIds] = useState<ReadonlySet<string>>(new Set());
+  const initial = AGENT_PRESETS.find((p) => p.id === initialPresetId);
+  const [presetId, setPresetId] = useState(initial?.id ?? "");
+  const [name, setName] = useState(initial?.label ?? "");
+  const [runtime, setRuntime] = useState<AgentRuntime>(initial?.runtime ?? "in_app");
+  const [appIds, setAppIds] = useState<ReadonlySet<string>>(new Set(initial?.appIds ?? []));
   const [access, setAccess] = useState<DeclaredAccess>("unknown");
   const [problem, setProblem] = useState<string | null>(null);
   const submit = useWorkspaceChange(api.declareAgent);
@@ -59,7 +66,7 @@ export function DeclareAgentForm({ onClose }: { onClose: () => void }) {
 
   return (
     <form className="card form" onSubmit={onSubmit} aria-labelledby={`${ids}-title`}>
-      <h3 id={`${ids}-title`}>Add an agent</h3>
+      <h3 id={`${ids}-title`}>{initial ? `Add ${initial.label}` : "Add an agent"}</h3>
       <div className="form-row">
         <label className="field">
           <span>Agent</span>

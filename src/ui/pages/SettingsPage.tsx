@@ -1,4 +1,6 @@
 import { enforcementStateOf } from "../../domain/core.ts";
+import { useAuth } from "../auth.tsx";
+import { SignInButton } from "../components/AccountMenu.tsx";
 import { EnforcementBadge } from "../components/Badges.tsx";
 import { href } from "../routing.ts";
 import { useWorkspace } from "../workspace.tsx";
@@ -14,6 +16,8 @@ export function SettingsPage() {
         <h2>Settings</h2>
         <p className="muted">How analysis runs and how your data is handled.</p>
       </header>
+
+      <SignInSettings />
 
       <section className="card" aria-labelledby="s-analysis">
         <h3 id="s-analysis">Analysis defaults</h3>
@@ -74,5 +78,60 @@ export function SettingsPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function SignInSettings() {
+  const { auth, signOut } = useAuth();
+  return (
+    <section className="card" aria-labelledby="s-signin" id="sign-in">
+      <h3 id="s-signin">Sign-in</h3>
+      <p className="muted">
+        Optional. Google sign-in only tells AgentRadius who you are (name and email). It requests no
+        access to Gmail, Drive, Calendar, or any other Google data, and no Google token is kept.
+        Your session lasts until you sign out, 12 hours pass, or AgentRadius stops.
+      </p>
+      {auth?.user ? (
+        <p>
+          Signed in as <strong>{auth.user.name}</strong>{" "}
+          <span className="muted">({auth.user.email})</span>.{" "}
+          <button type="button" className="btn-link" onClick={signOut}>
+            Sign out
+          </button>
+        </p>
+      ) : auth?.configured ? (
+        <SignInButton />
+      ) : (
+        <>
+          <p>
+            <strong>Not set up.</strong> To turn on Google sign-in:
+          </p>
+          <ol className="setup-list">
+            <li>
+              In the Google Cloud Console, open <em>APIs &amp; Services → Credentials</em> and
+              create an <em>OAuth client ID</em> of type <em>Web application</em>.
+            </li>
+            <li>
+              Add this <em>Authorized redirect URI</em>:{" "}
+              <code>
+                {auth?.redirectUri ?? "http://127.0.0.1:4317/api/v1/auth/google/callback"}
+              </code>
+            </li>
+            <li>
+              Start AgentRadius with the client ID and secret in its environment:
+              <pre className="code-block">
+                {"export AGENTRADIUS_GOOGLE_CLIENT_ID=<your client id>\n" +
+                  "export AGENTRADIUS_GOOGLE_CLIENT_SECRET=<your client secret>\n" +
+                  "npm start"}
+              </pre>
+            </li>
+          </ol>
+          <p className="muted small">
+            Keep the client secret out of files you commit. AgentRadius reads it from the
+            environment only and never shows or logs it.
+          </p>
+        </>
+      )}
+    </section>
   );
 }
