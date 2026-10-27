@@ -4,7 +4,13 @@ import type { AddressInfo } from "node:net";
 import { extname, resolve, sep } from "node:path";
 import type { ZodType } from "zod";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../analysis/index.ts";
-import { WorkspaceError, type WorkspaceSession } from "../application/workspace.ts";
+import {
+  ProviderError,
+  WorkspaceError,
+  type ProviderErrorCode,
+  type WorkspaceSession,
+} from "../application/workspace.ts";
+import { providerInfo } from "../domain/index.ts";
 import { MAX_REQUEST_BYTES } from "./config.ts";
 import { API_PREFIX, type AuthResponse, type HealthResponse } from "./contracts.ts";
 import {
@@ -17,7 +23,9 @@ import {
 import { applySecurityHeaders, HttpError, readJsonBody, sendError, sendJson } from "./http.ts";
 import {
   BlastRadiusRequestSchema,
+  ConnectRequestSchema,
   DeclareAgentRequestSchema,
+  DisconnectRequestSchema,
   EmptyRequestSchema,
   RemoveAgentRequestSchema,
   SimulationRequestSchema,
@@ -150,6 +158,33 @@ async function handle(
       changeDeclarations(() => session.removeAgent(body.id));
       return sendJson(res, 200, session.current().view(DEFAULT_ANALYSIS_SETTINGS));
     }
+    case "POST /connections": {
+      assertSameOrigin(req, port, options);
+      const raw = await readJsonBody(req, MAX_REQUEST_BYTES);
+      const result = ConnectRequestSchema.safeParse(raw);
+      if (!result.success) {
+        const provider = DisconnectRequestSchema.shape.provider.safeParse(
+          (raw as { provider?: unknown } | null)?.provider,
+        );
+        // Issue paths only: never echo any part of the submitted token.
+        throw new HttpError(
+          400,
+          "invalid_token",
+          provider.success
+            ? `Paste a ${providerInfo(provider.data).tokenName} (${providerInfo(provider.data).tokenHint.toLowerCase()}).`
+            : "Request failed validation",
+          result.error.issues.map((i) => ({ path: `/${i.path.join("/")}`, message: i.code })),
+        );
+      }
+      await connectAccount(() => session.connect(result.data.provider, result.data.token));
+      return sendJson(res, 200, session.current().view(DEFAULT_ANALYSIS_SETTINGS));
+    }
+    case "POST /connections/remove": {
+      assertSameOrigin(req, port, options);
+      const body = parse(DisconnectRequestSchema, await readJsonBody(req, MAX_REQUEST_BYTES));
+      changeDeclarations(() => session.disconnect(body.provider));
+      return sendJson(res, 200, session.current().view(DEFAULT_ANALYSIS_SETTINGS));
+    }
     case "POST /blast-radius": {
       assertSameOrigin(req, port, options);
       const body = parse(BlastRadiusRequestSchema, await readJsonBody(req, MAX_REQUEST_BYTES));
@@ -253,6 +288,38 @@ function changeDeclarations(change: () => void): void {
           error.issues.map((i) => ({ path: i.path, message: i.code })),
         );
     }
+  }
+}
+
+const PROVIDER_ERRORS: Readonly<Record<ProviderErrorCode, [number, string]>> = {
+  token_rejected: [
+    401,
+    "The provider rejected this token. Check that it hasn't expired, then try again.",
+  ],
+  provider_unreachable: [502, "Couldn't reach the provider. Check your connection and try again."],
+  unexpected_response: [
+    502,
+    "The provider sent a response AgentRadius doesn't understand, so nothing was added.",
+  ],
+};
+
+async function connectAccount(connect: () => Promise<void>): Promise<void> {
+  try {
+    await connect();
+  } catch (error) {
+    if (error instanceof ProviderError) {
+      const [status, message] = PROVIDER_ERRORS[error.code];
+      throw new HttpError(status, error.code, message);
+    }
+    if (error instanceof WorkspaceError && error.code === "invalid_snapshot") {
+      throw new HttpError(
+        422,
+        "connection_rejected",
+        "The account data failed validation, so it was discarded. Nothing else changed.",
+        error.issues.map((i) => ({ path: i.path, message: i.code })),
+      );
+    }
+    throw error;
   }
 }
 

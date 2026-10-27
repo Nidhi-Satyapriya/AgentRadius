@@ -13,7 +13,15 @@ import {
   type ReachMatrix,
   type SimulationResult,
 } from "../analysis/index.ts";
-import { declaredAgentsToGraph, scanThisMac, slug } from "../connectors/index.ts";
+import {
+  createProviderReader,
+  declaredAgentsToGraph,
+  providerToGraph,
+  scanThisMac,
+  slug,
+  type ProviderInventory,
+  type ReadProvider,
+} from "../connectors/index.ts";
 import {
   MAX_DECLARED_AGENTS,
   SCHEMA_VERSION,
@@ -23,6 +31,7 @@ import {
   type Finding,
   type GraphEdge,
   type GraphNode,
+  type ProviderId,
   type Snapshot,
 } from "../domain/index.ts";
 import { DEMO_WORKSTATION_SNAPSHOT } from "../fixtures/demoWorkstation.ts";
@@ -34,6 +43,8 @@ import {
   type MergeConflict,
   type SnapshotMeta,
 } from "../graph/index.ts";
+
+export { ProviderError, type ProviderErrorCode } from "../connectors/index.ts";
 
 export interface WorkspaceView {
   readonly meta: SnapshotMeta;
@@ -54,6 +65,16 @@ export interface WorkspaceView {
   readonly declaredAgents: readonly DeclaredAgent[];
   /** When this computer was last scanned, or null if it hasn't been. */
   readonly scannedAt: string | null;
+  /** Accounts read with a token the user pasted. The token itself is never kept. */
+  readonly connections: readonly ProviderConnection[];
+}
+
+export interface ProviderConnection {
+  readonly provider: ProviderId;
+  readonly accountLabel: string;
+  readonly readAt: string;
+  readonly items: number;
+  readonly truncated: boolean;
 }
 
 export class WorkspaceError extends Error {
@@ -84,6 +105,7 @@ export function createWorkspaceService(
   rawSnapshot: unknown,
   now: () => Date = () => new Date(),
   declaredAgents: readonly DeclaredAgent[] = [],
+  connections: readonly ProviderConnection[] = [],
 ): WorkspaceService {
   const result = ingestSnapshot(rawSnapshot);
   if (!result.ok)
@@ -116,6 +138,7 @@ export function createWorkspaceService(
         reach: reachMatrix(graph, settings, at),
         declaredAgents,
         scannedAt: graph.meta.dataOrigin === "local_discovery" ? graph.meta.collectedAt : null,
+        connections,
       };
     },
     blastRadius(startId, settings) {
@@ -146,6 +169,9 @@ export interface WorkspaceSession {
   scan(): Promise<void>;
   declareAgent(input: AgentDeclarationInput): void;
   removeAgent(id: string): void;
+  /** Reads the account once with `token`, then drops the token. Replaces an earlier read. */
+  connect(provider: ProviderId, token: string): Promise<void>;
+  disconnect(provider: ProviderId): void;
 }
 
 /** Session whose scan reads this computer's MCP client configs (read-only, in memory). */
@@ -158,17 +184,29 @@ export function createWorkspaceSession(
   now: () => Date = () => new Date(),
   /** Tests only. The app always starts from the empty workspace. */
   initial?: Snapshot,
+  readProvider: ReadProvider = createProviderReader(),
 ): WorkspaceSession {
   let base: Snapshot = initial ?? emptySnapshot(now());
   let declared: readonly DeclaredAgent[] = [];
+  let accounts: readonly ProviderInventory[] = [];
   let active = createWorkspaceService(base, now);
   let inFlight: Promise<void> | null = null;
 
   /** Builds first and commits only on success, so a rejected change leaves the session intact. */
-  const commit = (nextBase: Snapshot, nextDeclared: readonly DeclaredAgent[]) => {
-    active = createWorkspaceService(withDeclaredAgents(nextBase, nextDeclared), now, nextDeclared);
+  const commit = (
+    nextBase: Snapshot,
+    nextDeclared: readonly DeclaredAgent[],
+    nextAccounts: readonly ProviderInventory[] = accounts,
+  ) => {
+    active = createWorkspaceService(
+      withAccounts(withDeclaredAgents(nextBase, nextDeclared), nextAccounts),
+      now,
+      nextDeclared,
+      nextAccounts.map(summarizeAccount),
+    );
     base = nextBase;
     declared = nextDeclared;
+    accounts = nextAccounts;
   };
 
   return {
@@ -204,6 +242,25 @@ export function createWorkspaceSession(
         declared.filter((a) => a.id !== id),
       );
     },
+    async connect(provider, token) {
+      const inventory = await readProvider(provider, token);
+      commit(
+        base,
+        declared,
+        [...accounts.filter((a) => a.provider !== provider), inventory].sort((a, b) =>
+          a.provider.localeCompare(b.provider),
+        ),
+      );
+    },
+    disconnect(provider) {
+      if (!accounts.some((a) => a.provider === provider))
+        throw new WorkspaceError("not_found", "Not connected");
+      commit(
+        base,
+        declared,
+        accounts.filter((a) => a.provider !== provider),
+      );
+    },
   };
 }
 
@@ -229,6 +286,33 @@ function withDeclaredAgents(base: Snapshot, agents: readonly DeclaredAgent[]): S
     nodes: [...base.nodes, ...declared.nodes],
     edges: [...base.edges, ...declared.edges],
     connectorRuns: [...base.connectorRuns, declared.run],
+  };
+}
+
+/** Adds each account read; items link to "everything you can access" nodes already present. */
+function withAccounts(base: Snapshot, inventories: readonly ProviderInventory[]): Snapshot {
+  if (inventories.length === 0) return base;
+  const ids = new Set(base.nodes.map((n) => n.id));
+  const nodes = [...base.nodes];
+  const edges = [...base.edges];
+  const runs = [...base.connectorRuns];
+  for (const inventory of inventories) {
+    const result = providerToGraph(inventory, ids);
+    for (const node of result.nodes) ids.add(node.id);
+    nodes.push(...result.nodes);
+    edges.push(...result.edges);
+    runs.push(result.run);
+  }
+  return { ...base, nodes, edges, connectorRuns: runs };
+}
+
+function summarizeAccount(inv: ProviderInventory): ProviderConnection {
+  return {
+    provider: inv.provider,
+    accountLabel: inv.accountLabel,
+    readAt: inv.readAt,
+    items: inv.items.length,
+    truncated: inv.truncated,
   };
 }
 

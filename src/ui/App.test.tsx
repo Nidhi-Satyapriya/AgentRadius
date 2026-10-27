@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../analysis/index.ts";
 import { createDemoWorkspaceService, createWorkspaceSession } from "../application/workspace.ts";
+import { SENTINEL } from "../../tests/helpers/graphBuilder.ts";
 import { scanForSecrets } from "../redaction/index.ts";
 import { Shell } from "./App.tsx";
 import { href, parseHash, PRIMARY_ROUTES, ROUTES, type Route, type RoutePath } from "./routing.ts";
@@ -88,7 +89,7 @@ describe("dashboard shell", () => {
     expect(screen.getByText("LIVE · THIS COMPUTER")).toBeTruthy();
     unmount();
     render(<Shell data={live} route={route("integrations")} />);
-    expect(screen.getByText(/Local sources read files on this computer only/)).toBeTruthy();
+    expect(screen.getByText(/Nothing here changes anything/)).toBeTruthy();
   });
 
   it("renders no secret-shaped text on any page", () => {
@@ -127,6 +128,68 @@ describe("integrations page", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     const next = onChange.mock.calls[0]![0] as typeof data;
     expect(next.declaredAgents.map((a) => a.name)).toEqual(["Notion AI"]);
+  });
+
+  it("connects an account with a pasted token and shows status only after a real read", async () => {
+    const tokenSeen: string[] = [];
+    const session = createWorkspaceSession(
+      async () => ({}),
+      undefined,
+      undefined,
+      async (provider, token) => {
+        tokenSeen.push(token);
+        return {
+          provider,
+          accountId: "42",
+          accountLabel: "@dev",
+          readAt: data.meta.collectedAt,
+          items: [{ id: "7", label: "acme/payments", actions: ["read", "write"] }],
+          truncated: false,
+          evidence: { assertion: "observed", confidence: "high" },
+          evidenceRef: "test",
+        };
+      },
+    );
+    const posted: string[] = [];
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/auth")) return { ok: true, status: 200, json: async () => SIGN_IN_OFF };
+      posted.push(url);
+      const body = JSON.parse(String(init?.body)) as { provider: "github"; token: string };
+      await session.connect(body.provider, body.token);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => session.current().view(DEFAULT_ANALYSIS_SETTINGS),
+      };
+    });
+    const onChange = vi.fn();
+    render(
+      <Shell
+        data={empty}
+        route={{ path: "integrations", params: new URLSearchParams() }}
+        onWorkspaceChange={onChange}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Connect accounts (read-only)" });
+    expect(within(card).queryByText(/Read \d/)).toBeNull();
+    fireEvent.click(within(card).getAllByRole("button", { name: "Connect" })[0]!);
+    const form = screen.getByRole("form", { name: "Connect GitHub" });
+    const input = within(form).getByLabelText(/Paste the fine-grained/) as HTMLInputElement;
+    expect(input.type).toBe("password");
+
+    fireEvent.change(input, { target: { value: SENTINEL.githubToken() } });
+    fireEvent.click(within(form).getByRole("button", { name: "Read my access" }));
+    expect(within(form).getByRole("alert").textContent).toMatch(/isn't a fine-grained/);
+    expect(posted).toEqual([]);
+    expect(input.value).toBe("");
+
+    fireEvent.change(input, { target: { value: SENTINEL.githubFineGrainedToken() } });
+    fireEvent.click(within(form).getByRole("button", { name: "Read my access" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(tokenSeen).toEqual([SENTINEL.githubFineGrainedToken()]);
+    const next = onChange.mock.calls[0]![0] as typeof data;
+    expect(next.connections.map((c) => c.items)).toEqual([1]);
+    expect(JSON.stringify(next)).not.toContain(SENTINEL.githubFineGrainedToken());
   });
 
   it("lists only what was added or scanned, with no placeholder accounts", () => {

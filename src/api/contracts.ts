@@ -9,6 +9,7 @@ import type {
   SimulationResult,
 } from "../analysis/index.ts";
 import type { AgentDeclarationInput, WorkspaceView } from "../application/workspace.ts";
+import type { ProviderId } from "../domain/index.ts";
 
 export const API_PREFIX = "/api/v1";
 
@@ -32,6 +33,12 @@ export interface AuthResponse {
 }
 
 export type DeclareAgentRequest = AgentDeclarationInput;
+
+export interface ConnectRequest {
+  readonly provider: ProviderId;
+  /** Sent once over loopback, used for one read, and dropped. Never returned. */
+  readonly token: string;
+}
 
 export interface BlastRadiusRequest {
   readonly startId: string;

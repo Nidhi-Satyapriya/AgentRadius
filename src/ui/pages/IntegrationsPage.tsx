@@ -8,6 +8,7 @@ import {
 } from "../../domain/core.ts";
 import { api } from "../api.ts";
 import { SeverityBadge } from "../components/Badges.tsx";
+import { ConnectAccounts, ConnectPrompt } from "../components/ConnectAccounts.tsx";
 import { DeclareAgentForm } from "../components/DeclareAgentForm.tsx";
 import {
   SCAN_DISCLOSURE,
@@ -56,8 +57,8 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
       <header className="page-header">
         <h2>Integrate your setup</h2>
         <p className="muted">
-          Add the AI agents you use, then scan this computer. Only what you add or scan shows up
-          here. Local sources read files on this computer only and change nothing.
+          Add the AI agents you use and scan this computer. Connect an account to replace
+          assumptions with what you can really reach. Nothing here changes anything.
         </p>
       </header>
 
@@ -184,6 +185,8 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
           )}
         </section>
       </div>
+
+      <ConnectAccounts />
 
       <h3 className="section-title">Your integrations</h3>
       {rows.length === 0 ? (
@@ -386,6 +389,7 @@ function DeclaredDetails({ row }: { row: Extract<IntegrationRow, { kind: "declar
           <dd>{ACCESS_LABELS[agent.access]}</dd>
         </div>
       </dl>
+      {agent.access === "as_you" && <ConnectPrompt appIds={agent.appIds} />}
       <div className="panel-actions">
         <a className="btn-secondary" href={href("blast-radius", { start: agent.id })}>
           See blast radius

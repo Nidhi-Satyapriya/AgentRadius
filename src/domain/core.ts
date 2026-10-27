@@ -6,3 +6,4 @@ export * from "./vocabulary.ts";
 export * from "./edgeSemantics.ts";
 export * from "./attributeKeys.ts";
 export * from "./agentCatalog.ts";
+export * from "./providerCatalog.ts";

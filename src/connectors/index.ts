@@ -5,6 +5,15 @@ import { scanMcpClients } from "./mcpConfig/scan.ts";
 export type { ConnectorResult, ScanContext } from "./contract.ts";
 export { declaredAgentsToGraph } from "./declaredAgents.ts";
 export { slug } from "./mcpConfig/toGraph.ts";
+export {
+  createProviderReader,
+  ProviderError,
+  providerToGraph,
+  type FetchLike,
+  type ProviderErrorCode,
+  type ProviderInventory,
+  type ReadProvider,
+} from "./providers/index.ts";
 
 /**
  * Runs every enabled local connector and assembles one snapshot. Read-only: connectors read a

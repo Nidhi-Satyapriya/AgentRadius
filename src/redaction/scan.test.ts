@@ -33,6 +33,13 @@ describe("scanForSecrets", () => {
     expect(ids).toEqual(["google-oauth-client-secret", "google-oauth-access-token"]);
   });
 
+  it("detects fine-grained GitHub tokens and Notion integration secrets", () => {
+    const ids = scanForSecrets([SENTINEL.githubFineGrainedToken(), SENTINEL.notionToken()]).flatMap(
+      (f) => f.patternIds,
+    );
+    expect(ids).toEqual(["github-token", "notion-token"]);
+  });
+
   it("does not flag credential references such as secret-manager URIs or env var names", () => {
     expect(
       scanForSecrets({

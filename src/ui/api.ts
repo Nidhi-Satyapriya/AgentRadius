@@ -4,6 +4,7 @@ import {
   type AuthResponse,
   type BlastRadiusRequest,
   type BlastRadiusResponse,
+  type ConnectRequest,
   type DeclareAgentRequest,
   type SimulationRequest,
   type SimulationResponse,
@@ -46,6 +47,13 @@ export const api = {
     request<WorkspaceResponse>("/agents", { method: "POST", body: JSON.stringify(body) }),
   removeAgent: (id: string) =>
     request<WorkspaceResponse>("/agents/remove", { method: "POST", body: JSON.stringify({ id }) }),
+  connect: (body: ConnectRequest) =>
+    request<WorkspaceResponse>("/connections", { method: "POST", body: JSON.stringify(body) }),
+  disconnect: (provider: ConnectRequest["provider"]) =>
+    request<WorkspaceResponse>("/connections/remove", {
+      method: "POST",
+      body: JSON.stringify({ provider }),
+    }),
 };
 
 /** Full-page navigation to Google; the server sends the browser back here afterwards. */

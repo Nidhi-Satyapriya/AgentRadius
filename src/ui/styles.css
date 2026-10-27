@@ -2027,6 +2027,74 @@ ul.inline {
   gap: 10px;
   margin-top: 12px;
 }
+.connect-card {
+  margin-top: 16px;
+}
+.connect-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.connect-item {
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.connect-item.is-connected {
+  border-color: rgba(74, 222, 128, 0.35);
+}
+.connect-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.connect-text {
+  display: grid;
+  min-width: 0;
+}
+.connect-text .muted {
+  font-size: 12px;
+}
+.connect-actions {
+  display: flex;
+  gap: 8px;
+}
+.connect-item > .small {
+  margin: 8px 0 0;
+}
+.connect-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.connect-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.connect-prompt {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+}
+.connect-prompt p {
+  margin: 0;
+}
+.connect-prompt p + p {
+  margin-top: 6px;
+}
 .empty-hero {
   text-align: center;
   padding: 48px 24px;

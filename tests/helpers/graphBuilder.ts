@@ -70,6 +70,8 @@ export function graphOf(nodes: GraphNode[], edges: GraphEdge[]): GraphIndex {
  */
 export const SENTINEL = {
   githubToken: () => ["gh", "p_", "Z".repeat(36)].join(""),
+  githubFineGrainedToken: () => ["github", "_pat_", "Z".repeat(40)].join(""),
+  notionToken: () => ["nt", "n_", "Z".repeat(46)].join(""),
   awsKeyId: () => ["AK", "IA", "Z".repeat(16)].join(""),
   googleClientSecret: () => ["GOC", "SPX-", "Z".repeat(28)].join(""),
   googleAccessToken: () => ["ya", "29.", "Z".repeat(40)].join(""),

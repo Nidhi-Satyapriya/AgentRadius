@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { AnalysisSettingsSchema, GraphChangeSchema } from "../analysis/index.ts";
-import { AGENT_RUNTIMES, CATALOG_APPS, DECLARED_ACCESS, EntityIdSchema } from "../domain/index.ts";
+import {
+  AGENT_RUNTIMES,
+  CATALOG_APPS,
+  DECLARED_ACCESS,
+  EntityIdSchema,
+  PROVIDER_IDS,
+  providerInfo,
+} from "../domain/index.ts";
 
 const MAX_CHANGES = 50;
 
@@ -38,3 +45,16 @@ export const SimulationRequestSchema = z.strictObject({
   changes: z.array(GraphChangeSchema).min(1).max(MAX_CHANGES),
   settings: AnalysisSettingsSchema.optional(),
 });
+
+/**
+ * Token shape is checked per provider so broad classic tokens are refused. Messages are fixed and
+ * never include the submitted value.
+ */
+export const ConnectRequestSchema = z
+  .strictObject({ provider: z.enum(PROVIDER_IDS), token: z.string().trim().max(400) })
+  .refine((body) => providerInfo(body.provider).tokenPattern.test(body.token), {
+    path: ["token"],
+    message: "This doesn't look like the expected token",
+  });
+
+export const DisconnectRequestSchema = z.strictObject({ provider: z.enum(PROVIDER_IDS) });

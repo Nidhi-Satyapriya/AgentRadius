@@ -3,6 +3,8 @@ import {
   catalogApp,
   compareSeverity,
   DECLARED_CONNECTOR_ID,
+  PROVIDERS,
+  providerConnectorId,
   type ConnectorStatus,
   type Severity,
 } from "../domain/core.ts";
@@ -11,11 +13,12 @@ import type { WorkspaceModel } from "./workspace.tsx";
 type ConnectorRun = WorkspaceResponse["connectorRuns"][number];
 type DeclaredAgent = WorkspaceResponse["declaredAgents"][number];
 
-export const CATEGORIES = ["local", "declared", "demo"] as const;
+export const CATEGORIES = ["local", "account", "declared", "demo"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
   local: "On this computer",
+  account: "Connected accounts",
   declared: "Added by you",
   demo: "Demo",
 };
@@ -74,19 +77,21 @@ export function integrationRows(ws: WorkspaceModel): IntegrationRow[] {
   const riskOf = (ids: Iterable<string>) =>
     maxSeverity([...ids].flatMap((id) => ws.findingsFor(id).map((f) => f.severity)));
 
+  const accountRuns = new Set(PROVIDERS.map((p) => providerConnectorId(p.id)));
   const sources: IntegrationRow[] = data.connectorRuns
     .filter((r) => r.connectorId !== DECLARED_CONNECTOR_ID)
     .map((run) => {
       const ids = byConnector.get(run.connectorId) ?? new Set<string>();
       const demo = data.meta.dataOrigin === "fixture";
+      const account = accountRuns.has(run.connectorId);
       return {
         kind: "source",
         run,
         id: run.connectorId,
         name: run.label,
-        category: demo ? "demo" : "local",
+        category: demo ? "demo" : account ? "account" : "local",
         status: STATUS[run.status],
-        auth: demo ? "Demo data" : "Reads local files",
+        auth: demo ? "Demo data" : account ? "Read-only token, not kept" : "Reads local files",
         lastSync: run.status === "not_implemented" ? null : (run.finishedAt ?? null),
         found: run.status === "not_implemented" ? null : ids.size,
         risk: riskOf(ids),

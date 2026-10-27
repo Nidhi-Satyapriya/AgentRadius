@@ -4,3 +4,4 @@ export * from "./schema.ts";
 export * from "./attributeKeys.ts";
 export * from "./finding.ts";
 export * from "./agentCatalog.ts";
+export * from "./providerCatalog.ts";

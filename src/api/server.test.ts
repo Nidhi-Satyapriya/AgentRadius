@@ -287,6 +287,35 @@ describe("declared agents", () => {
   });
 });
 
+describe("account connections", () => {
+  it("refuses broad or malformed tokens before contacting anyone, without echoing them", async () => {
+    const classic = SENTINEL.githubToken();
+    const res = await postJson("/api/v1/connections", { provider: "github", token: classic });
+    expect(res.status).toBe(400);
+    expect(res.body).toContain("fine-grained personal access token");
+    expect(res.body).not.toContain(classic);
+    const wrongProvider = await postJson("/api/v1/connections", {
+      provider: "notion",
+      token: SENTINEL.githubFineGrainedToken(),
+    });
+    expect(wrongProvider.status).toBe(400);
+    expect(wrongProvider.body).not.toContain(SENTINEL.githubFineGrainedToken());
+    expect(
+      (await postJson("/api/v1/connections", { provider: "dropbox", token: "x" })).status,
+    ).toBe(400);
+  });
+
+  it("requires same-origin requests and reports disconnecting an unknown account", async () => {
+    const cross = await postJson(
+      "/api/v1/connections",
+      { provider: "github", token: SENTINEL.githubFineGrainedToken() },
+      { "sec-fetch-site": "cross-site" },
+    );
+    expect(cross.status).toBe(403);
+    expect((await postJson("/api/v1/connections/remove", { provider: "github" })).status).toBe(404);
+  });
+});
+
 describe("Google sign-in", () => {
   const calls: string[] = [];
   const fakeGoogle: FetchLike = async (url, init) => {

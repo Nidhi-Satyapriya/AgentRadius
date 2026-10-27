@@ -38,6 +38,11 @@ export const SECRET_PATTERNS: readonly SecretPattern[] = [
     regex: /\bya29\.[A-Za-z0-9_-]{20,}/,
   },
   {
+    id: "notion-token",
+    description: "Notion integration token",
+    regex: /\b(?:ntn_[A-Za-z0-9]{40,}|secret_[A-Za-z0-9]{43})\b/,
+  },
+  {
     id: "llm-provider-key",
     description: "LLM provider API key",
     regex: /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\b/,
