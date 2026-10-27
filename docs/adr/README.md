@@ -15,3 +15,4 @@ Each record states the context, the decision, and its consequences. A record is 
 | [0009](./0009-custom-svg-graph.md)                                | Custom SVG graph renderer                                                    | Accepted |
 | [0010](./0010-optional-google-sign-in.md)                         | Optional Google sign-in, and no sample data in the app                       | Accepted |
 | [0011](./0011-cross-platform-discovery-and-capability-catalog.md) | Windows and Linux config locations, and a catalog of what MCP servers can do | Accepted |
+| [0012](./0012-read-only-account-connections.md)                   | Read-only account connections with a pasted token that is not kept           | Accepted |

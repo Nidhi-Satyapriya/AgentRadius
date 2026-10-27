@@ -37,6 +37,15 @@ Columns:
 - **Cannot see:** blind spots, which are reported in `ConnectorRun.blindSpots`.
 - **Never stores:** values that are dropped before graph construction. Ingestion rejects them anyway.
 
+## Live: account connections (network, opt-in per use)
+
+These are not local discovery. They run only when you paste a read-only token, and they contact only the provider ([ADR 0012](./adr/0012-read-only-account-connections.md)).
+
+| Provider | Can observe                                                                                   | Privilege                                        | Cannot see                                                                                                        | Never stores             |
+| -------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| GitHub   | Repositories the fine-grained token can see, and your permission on each (read, write, admin) | A fine-grained token with only Metadata: read    | Org settings, teams, secrets, other people's access, repositories past the first 1,000                            | The token                |
+| Notion   | Pages and databases shared with your internal integration, with their titles                  | An internal integration with only "Read content" | Pages not shared with the integration (Notion AI may still reach them), page contents, items past the first 1,000 | The token, page contents |
+
 ## Planned connectors, in build order
 
 | Connector                                | Can observe                                                                                                                                                                                             | Privilege                                                                                                | Cannot see                                                                                                              | Never stores                                                 |

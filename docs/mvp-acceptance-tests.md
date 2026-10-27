@@ -49,6 +49,18 @@ The criteria come from the starter list (`docs/archive/starter/docs/mvp-acceptan
 | Input is validated, same-origin only, and secret-shaped names are rejected without echo         | ✅     | `server.test.ts` › rejects duplicates, unknown apps, unsafe names, and secret-shaped names; › requires same-origin requests and removes agents on request    |
 | Declarations persist across restarts                                                            | ◻      | In memory only, by decision. Lost when AgentRadius stops.                                                                                                    |
 
+## Account connections (GitHub, Notion)
+
+| Criterion                                                                                                  | Status | Tests                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only fine-grained GitHub tokens and Notion integration secrets are accepted; refusals never echo the token | ✅     | `server.test.ts` › refuses broad or malformed tokens before contacting anyone, without echoing them; `App.test.tsx` › connects an account with a pasted token…         |
+| Readers call fixed read-only endpoints, refuse redirects, and never put the token in a URL or result       | ✅     | `providers.test.ts` › lists repositories with your role in each, using only fixed read-only endpoints                                                                  |
+| Provider errors are reported by code only, and a failed read keeps the previous workspace                  | ✅     | `providers.test.ts` › reports rejected tokens, unreachable hosts, and odd responses without detail; › keeps the previous workspace when the provider rejects the token |
+| Agents that act as you reach the concrete repositories or pages; disconnecting removes them                | ✅     | `providers.test.ts` › turns an assumed 'everything you can access' into concrete repositories                                                                          |
+| Notion access is labeled inferred; secret-shaped names are hidden                                          | ✅     | `providers.test.ts` › lists shared pages across result pages…; › hides names that look like credentials                                                                |
+| Connected status appears only after a successful read                                                      | ✅     | `App.test.tsx` › connects an account with a pasted token and shows status only after a real read                                                                       |
+| Tested against the live GitHub and Notion APIs                                                             | ◻      | Not yet. Tests use a fake `fetch`.                                                                                                                                     |
+
 ## Reachability
 
 | Criterion                                                                | Status | Tests                                                                                                                                                                                                                                               |
