@@ -1,3 +1,4 @@
+import type { Platform } from "./mcpConfig/clients.ts";
 import type { ConnectorRun, GraphEdge, GraphNode } from "../domain/index.ts";
 
 /**
@@ -14,4 +15,6 @@ export interface ConnectorResult {
 export interface ScanContext {
   readonly homeDir: string;
   readonly now: Date;
+  /** Which operating system's file locations to read. Defaults to the one AgentRadius runs on. */
+  readonly platform?: Platform;
 }

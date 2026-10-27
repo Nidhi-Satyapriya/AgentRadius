@@ -3,7 +3,7 @@ import type { ConnectorRun, ConnectorStatus } from "../../domain/index.ts";
 import type { ConnectorResult, ScanContext } from "../contract.ts";
 import { pathExists, readConfigFile, type ConfigReadResult } from "../fileAccess.ts";
 import { parseJsonc } from "../jsonc.ts";
-import { MCP_CLIENTS, type McpClient } from "./clients.ts";
+import { currentPlatform, mcpClientsFor, PLATFORM_LABELS, type McpClient } from "./clients.ts";
 import { extractServers, tildify } from "./parse.ts";
 import { discoverPluginLocations } from "./plugins.ts";
 import { clientToGraph, type ParsedFile } from "./toGraph.ts";
@@ -14,7 +14,7 @@ const DATA_CATEGORIES = [
   "MCP server names, transports, and launch commands (secret-shaped arguments redacted)",
   "Names of environment variables and HTTP headers (values are discarded while parsing)",
   "Where each credential value is stored (plain text, secret manager, prompt, environment)",
-  "Whether the client application bundle exists",
+  "Whether the client application is installed",
 ];
 
 const BLIND_SPOTS = [
@@ -34,7 +34,7 @@ interface FileOutcome {
 /** Reads every known MCP client config. Read-only; never executes anything it finds. */
 export async function scanMcpClients(
   context: ScanContext,
-  clients: readonly McpClient[] = MCP_CLIENTS,
+  clients: readonly McpClient[] = mcpClientsFor(context.platform ?? currentPlatform()),
 ): Promise<ConnectorResult[]> {
   return Promise.all(clients.map((client) => scanClient(client, context)));
 }
@@ -70,7 +70,14 @@ async function scanClient(client: McpClient, context: ScanContext): Promise<Conn
     }
   }
   const appInstalled =
-    client.appBundle === undefined ? undefined : await pathExists(client.appBundle);
+    client.appPath === undefined
+      ? undefined
+      : await pathExists(
+          client.appPath.homeRelative
+            ? join(context.homeDir, client.appPath.path)
+            : client.appPath.path,
+        );
+  const osLabel = PLATFORM_LABELS[context.platform ?? currentPlatform()];
   const parsedFiles = outcomes.flatMap((o) => (o.parsed !== undefined ? [o.parsed] : []));
   const graph =
     parsedFiles.length > 0
@@ -87,7 +94,7 @@ async function scanClient(client: McpClient, context: ScanContext): Promise<Conn
     finishedAt: new Date().toISOString(),
     dataCategories: DATA_CATEGORIES,
     requiredPrivileges: [
-      `Read access, as your macOS user, to: ${outcomes.map((o) => o.displayPath).join(", ")}`,
+      `Read access, as your ${osLabel} user, to: ${outcomes.map((o) => o.displayPath).join(", ")}`,
     ],
     coverage: coverageOf(client, outcomes, graph.serverCount, appInstalled),
     blindSpots:
@@ -135,7 +142,10 @@ function errorOf(outcome: FileOutcome): { code: string; message: string }[] {
       return [];
     case "denied":
       return [
-        { code: "permission_denied", message: `macOS denied read access to ${displayPath}.` },
+        {
+          code: "permission_denied",
+          message: `The operating system denied read access to ${displayPath}.`,
+        },
       ];
     case "not_a_file":
       return [{ code: "not_a_file", message: `${displayPath} is not a regular file; skipped.` }];

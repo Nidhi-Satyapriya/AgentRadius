@@ -56,8 +56,8 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
       <header className="page-header">
         <h2>Integrate your setup</h2>
         <p className="muted">
-          Add the AI agents you use, then scan this Mac. Only what you add or scan shows up here.
-          Local sources read files on this Mac only and change nothing.
+          Add the AI agents you use, then scan this computer. Only what you add or scan shows up
+          here. Local sources read files on this computer only and change nothing.
         </p>
       </header>
 
@@ -78,7 +78,7 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
             2
           </span>
           <div>
-            <strong>Scan this Mac</strong>
+            <strong>Scan this computer</strong>
             <span className="muted">
               {scanned ? `Scanned ${timeAgo(ws.data.scannedAt!)}` : "Finds MCP servers"}
             </span>
@@ -107,8 +107,8 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
             <h3 id="catalog-title">Add agents one by one</h3>
           </div>
           <p className="muted">
-            For assistants that live inside apps, which a scan of this Mac can&apos;t see. Choose
-            one, confirm what it can reach, and add it.
+            For assistants that live inside apps, which a scan of this computer can&apos;t see.
+            Choose one, confirm what it can reach, and add it.
           </p>
           {ws.replace && adding !== null ? (
             <DeclareAgentForm
@@ -171,7 +171,7 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
             <span />
             <span />
           </span>
-          <h3 id="scan-title">{scanned ? "This Mac is mapped" : "Scan this Mac"}</h3>
+          <h3 id="scan-title">{scanned ? "This computer is mapped" : "Scan this computer"}</h3>
           <p className="muted">{SCAN_DISCLOSURE}</p>
           <div className="scan-actions">
             <ScanButton />
@@ -189,7 +189,7 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
       {rows.length === 0 ? (
         <div className="card">
           <Empty>
-            Nothing added yet. Add an agent or scan this Mac. AgentRadius shows no sample data.
+            Nothing added yet. Add an agent or scan this computer. AgentRadius shows no sample data.
           </Empty>
         </div>
       ) : (

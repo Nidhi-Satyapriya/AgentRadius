@@ -447,9 +447,7 @@ function ImpactCard({
   const first = impact.actions[0]!;
   const pathIds = [...new Set(impact.actions.flatMap((a) => a.path.steps.map((s) => s.edgeId)))];
   const evidence = impact.actions.map((a) => a.path.assertion).reduce(weakerAssertion);
-  const chain = [first.path.steps[0]?.fromId, ...first.path.steps.map((s) => s.toId)].filter(
-    (id): id is string => id !== undefined,
-  );
+  const chain = first.path.steps.map((st) => st.toId);
   return (
     <li className="impact-card">
       <div className="impact-head">

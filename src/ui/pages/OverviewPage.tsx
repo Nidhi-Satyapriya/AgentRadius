@@ -15,7 +15,7 @@ const FEATURES: readonly { icon: IconName; title: string; text: string; to: Rout
   {
     icon: "integrations",
     title: "Discover MCP setups",
-    text: "Reads the MCP configs of Cursor, VS Code, Claude Desktop, Claude Code, and Windsurf. Read-only.",
+    text: "Reads the MCP configs of Cursor, VS Code, Claude Desktop, Claude Code, and Windsurf on macOS, Windows, or Linux, and knows what common servers can do.",
     to: "integrations",
   },
   {
@@ -45,7 +45,7 @@ const FEATURES: readonly { icon: IconName; title: string; text: string; to: Rout
   {
     icon: "settings",
     title: "Local and honest",
-    text: "Nothing leaves this Mac. Secrets are never read into the app. Nothing is blocked or changed.",
+    text: "Nothing leaves this computer. Secrets are never read into the app. Nothing is blocked or changed.",
     to: "settings",
   },
 ];
@@ -68,7 +68,7 @@ export function OverviewPage({ signInFailed = false }: { signInFailed?: boolean 
       )}
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow">Permission intelligence for AI agents · runs on this Mac</p>
+          <p className="eyebrow">Permission intelligence for AI agents · runs on your computer</p>
           <h2 id="hero-title">
             See everything your AI agents <span className="accent-text">can reach.</span>
           </h2>
@@ -137,7 +137,7 @@ export function OverviewPage({ signInFailed = false }: { signInFailed?: boolean 
           <Step
             n={3}
             done={scanned}
-            title="Scan this Mac"
+            title="Scan this computer"
             text={scanned ? "Done" : "Finds MCP servers, read-only"}
             to="integrations"
           />

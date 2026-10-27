@@ -47,7 +47,7 @@ const openGraph = () => {
   window.location.hash = href("graph", { scanned: "1" });
 };
 
-/** Scans this Mac, then opens the Permission Graph. */
+/** Scans this computer, then opens the Permission Graph. */
 export function ScanButton({ className = "btn-primary" }: { className?: string }) {
   const { data } = useWorkspace();
   const scan = useWorkspaceChange(api.scanThisMac, openGraph);
@@ -61,7 +61,7 @@ export function ScanButton({ className = "btn-primary" }: { className?: string }
         disabled={scan.busy}
         title={SCAN_DISCLOSURE}
       >
-        {scan.busy ? "Scanning…" : data.scannedAt ? "Scan again" : "Scan this Mac"}
+        {scan.busy ? "Scanning…" : data.scannedAt ? "Scan again" : "Scan this computer"}
       </button>
       {scan.error !== null && (
         <span className="inline-error" role="alert">
@@ -79,12 +79,12 @@ export function SourceStatus() {
   return (
     <span
       className={`source-pill ${live ? "is-live" : "is-idle"}`}
-      title={live ? SCAN_DISCLOSURE : "This Mac hasn't been scanned yet."}
+      title={live ? SCAN_DISCLOSURE : "This computer hasn't been scanned yet."}
     >
       <span className="status-dot" aria-hidden="true" />
       {live ? (
         <>
-          <strong>LIVE · THIS MAC</strong>
+          <strong>LIVE · THIS COMPUTER</strong>
           <span className="muted">{timeAgo(data.scannedAt!)}</span>
         </>
       ) : (

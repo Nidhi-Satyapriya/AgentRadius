@@ -12,7 +12,7 @@ import { ingestSnapshot } from "../../graph/index.ts";
 import { scanForSecrets } from "../../redaction/index.ts";
 import { scanThisMac } from "../index.ts";
 import { MAX_CONFIG_BYTES } from "../fileAccess.ts";
-import { MCP_CLIENTS } from "./clients.ts";
+import { MCP_CLIENTS, mcpClientsFor } from "./clients.ts";
 import { scanMcpClients } from "./scan.ts";
 
 const NOW = new Date("2026-10-21T00:00:00Z");
@@ -43,7 +43,9 @@ describe("what known MCP servers can do", () => {
         },
       }),
     });
-    const ingested = ingestSnapshot(await scanThisMac({ homeDir: dir, now: NOW }));
+    const ingested = ingestSnapshot(
+      await scanThisMac({ homeDir: dir, now: NOW, platform: "darwin" }),
+    );
     expect(ingested.ok).toBe(true);
     if (!ingested.ok) return;
     const report = analyzeBlastRadius(
@@ -96,7 +98,7 @@ describe("local MCP configuration scan", () => {
       }`,
     });
 
-    const snapshot = await scanThisMac({ homeDir: dir, now: NOW });
+    const snapshot = await scanThisMac({ homeDir: dir, now: NOW, platform: "darwin" });
     const text = JSON.stringify(snapshot);
     expect(text).not.toContain(token);
     expect(text).not.toContain(dir);
@@ -146,7 +148,7 @@ describe("local MCP configuration scan", () => {
     });
     const old = join(dir, ".cursor/plugins/cache/market/acme/old");
     utimesSync(old, new Date("2020-01-01"), new Date("2020-01-01"));
-    const [cursor] = await scanMcpClients({ homeDir: dir, now: NOW }, [
+    const [cursor] = await scanMcpClients({ homeDir: dir, now: NOW, platform: "darwin" }, [
       MCP_CLIENTS.find((c) => c.id === "cursor")!,
     ]);
     const servers = cursor!.nodes.filter((n) => n.type === "MCPServer");
@@ -157,7 +159,7 @@ describe("local MCP configuration scan", () => {
   });
 
   it("reports missing configs as found-nothing, not as failures", async () => {
-    const results = await scanMcpClients({ homeDir: home({}), now: NOW });
+    const results = await scanMcpClients({ homeDir: home({}), now: NOW, platform: "darwin" });
     for (const r of results) {
       expect(r.run.status).toBe("completed");
       expect(r.run.coverage).toMatch(/No .* MCP configuration was found/);
@@ -174,7 +176,7 @@ describe("local MCP configuration scan", () => {
     mkdirSync(join(dir, "Library/Application Support/Claude/claude_desktop_config.json"), {
       recursive: true,
     });
-    const results = await scanMcpClients({ homeDir: dir, now: NOW });
+    const results = await scanMcpClients({ homeDir: dir, now: NOW, platform: "darwin" });
     const byId = new Map(results.map((r) => [r.run.connectorId, r.run]));
     expect(byId.get("local.mcp-config.cursor")).toMatchObject({
       status: "failed",
@@ -191,7 +193,7 @@ describe("local MCP configuration scan", () => {
       const dir = home({ [CURSOR]: "{}" });
       chmodSync(join(dir, CURSOR), 0o000);
       try {
-        const results = await scanMcpClients({ homeDir: dir, now: NOW });
+        const results = await scanMcpClients({ homeDir: dir, now: NOW, platform: "darwin" });
         expect(
           results.find((r) => r.run.connectorId === "local.mcp-config.cursor")?.run,
         ).toMatchObject({
@@ -210,12 +212,46 @@ describe("local MCP configuration scan", () => {
         mcpServers: { off: { command: "npx", args: ["x@1.0.0"], disabled: true } },
       }),
     });
-    const a = await scanThisMac({ homeDir: dir, now: NOW });
-    const b = await scanThisMac({ homeDir: dir, now: NOW });
+    const a = await scanThisMac({ homeDir: dir, now: NOW, platform: "darwin" });
+    const b = await scanThisMac({ homeDir: dir, now: NOW, platform: "darwin" });
     const strip = (s: typeof a) => ({ ...s, connectorRuns: [] });
     expect(strip(a)).toEqual(strip(b));
     expect(a.edges.find((e) => e.to === "mcp:cursor.off")?.conditions[0]?.state).toBe(
       "does_not_hold",
+    );
+  });
+});
+
+describe("Windows and Linux locations", () => {
+  const server = JSON.stringify({
+    mcpServers: { github: { url: "https://api.githubcopilot.com/mcp/" } },
+  });
+
+  it("reads Windows profile locations", async () => {
+    const dir = home({
+      "AppData/Roaming/Claude/claude_desktop_config.json": server,
+      "AppData/Roaming/Code/User/mcp.json": JSON.stringify({
+        servers: { gh: { type: "http", url: "https://api.githubcopilot.com/mcp/" } },
+      }),
+      "AppData/Local/Programs/cursor/Cursor.exe": "",
+    });
+    const results = await scanMcpClients({ homeDir: dir, now: NOW, platform: "win32" });
+    const byId = new Map(results.map((r) => [r.run.connectorId, r]));
+    expect(
+      byId.get("local.mcp-config.claude-desktop")!.nodes.some((n) => n.type === "MCPServer"),
+    ).toBe(true);
+    expect(byId.get("local.mcp-config.vscode")!.run.coverage).toMatch(/AppData.Roaming.Code/);
+    expect(byId.get("local.mcp-config.claude-desktop")!.run.requiredPrivileges[0]).toMatch(
+      /Windows user/,
+    );
+  });
+
+  it("reads Linux locations and skips clients with no Linux config", async () => {
+    const dir = home({ ".config/Code/User/mcp.json": JSON.stringify({ servers: {} }) });
+    const results = await scanMcpClients({ homeDir: dir, now: NOW, platform: "linux" });
+    expect(results.map((r) => r.run.connectorId)).not.toContain("local.mcp-config.claude-desktop");
+    expect(mcpClientsFor("linux").find((c) => c.id === "vscode")!.locations[0]!.relativePath).toBe(
+      ".config/Code/User/mcp.json",
     );
   });
 });

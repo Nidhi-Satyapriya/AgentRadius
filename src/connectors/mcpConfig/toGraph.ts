@@ -41,7 +41,7 @@ export interface ClientObservation {
   readonly client: McpClient;
   readonly connectorId: string;
   readonly observedAt: string;
-  /** `undefined` when the client has no app bundle to check (CLI tools). */
+  /** `undefined` when there is no app to check (CLI tools, or no known install path). */
   readonly appInstalled: boolean | undefined;
   readonly files: readonly ParsedFile[];
 }
@@ -160,14 +160,13 @@ export function clientToGraph(observation: ClientObservation): {
   const appId = `app:${client.id}`;
   const agentId = `agent:${client.id}`;
 
-  g.node(LOCAL_BOUNDARY_ID, "TrustBoundary", "This Mac — your user session", firstFile);
-  g.node(appId, "Application", client.label, client.appBundle ?? firstFile, {
+  g.node(LOCAL_BOUNDARY_ID, "TrustBoundary", "This computer — your user session", firstFile);
+  g.node(appId, "Application", client.label, client.appPath?.path ?? firstFile, {
     boundary: LOCAL_BOUNDARY_ID,
     method: "filesystem_metadata",
     attributes: {
-      ...(observation.appInstalled !== undefined
-        ? { installed: observation.appInstalled }
-        : { kind: "command-line tool" }),
+      ...(client.cli ? { kind: "command-line tool" } : {}),
+      ...(observation.appInstalled !== undefined ? { installed: observation.appInstalled } : {}),
       configFiles: files.map((f) => f.displayPath),
     },
   });

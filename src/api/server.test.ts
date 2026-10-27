@@ -31,7 +31,8 @@ writeFileSync(
     },
   }),
 );
-let scanner: () => Promise<unknown> = () => scanThisMac({ homeDir: fakeHome, now: new Date() });
+let scanner: () => Promise<unknown> = () =>
+  scanThisMac({ homeDir: fakeHome, now: new Date(), platform: "darwin" });
 // Analysis endpoints are exercised against the labeled fixture; the app itself starts empty.
 const server = createApiServer(
   createWorkspaceSession(() => scanner(), undefined, DEMO_WORKSTATION_SNAPSHOT),

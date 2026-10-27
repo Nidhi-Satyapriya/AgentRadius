@@ -17,7 +17,7 @@ export async function scanThisMac(context: ScanContext): Promise<Snapshot> {
     snapshotId: `local:${context.now.toISOString()}`,
     collectedAt: context.now.toISOString(),
     dataOrigin: "local_discovery",
-    environmentLabel: "This Mac",
+    environmentLabel: "This computer",
     nodes: results.flatMap((r) => r.nodes),
     edges: results.flatMap((r) => r.edges),
     connectorRuns: results.map((r) => r.run),

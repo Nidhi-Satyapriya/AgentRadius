@@ -29,7 +29,7 @@ export const GraphChangeSchema = z.discriminatedUnion("kind", [
 export type GraphChange = z.infer<typeof GraphChangeSchema>;
 
 export const SIMULATION_NOTICE =
-  "Simulated on an in-memory copy of the graph. Nothing was changed on this Mac, in any configuration file, or at any provider.";
+  "Simulated on an in-memory copy of the graph. Nothing was changed on this computer, in any configuration file, or at any provider.";
 
 const SIMULATION_SOURCE = {
   connectorId: "agentradius.simulation",

@@ -15,7 +15,7 @@ export const CATEGORIES = ["local", "declared", "demo"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Readonly<Record<Category, string>> = {
-  local: "On this Mac",
+  local: "On this computer",
   declared: "Added by you",
   demo: "Demo",
 };

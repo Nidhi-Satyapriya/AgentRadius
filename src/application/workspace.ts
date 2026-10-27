@@ -52,7 +52,7 @@ export interface WorkspaceView {
   readonly reach: ReachMatrix;
   /** Agents the user described on the Integrations page. Unverified. */
   readonly declaredAgents: readonly DeclaredAgent[];
-  /** When this Mac was last scanned, or null if it hasn't been. */
+  /** When this computer was last scanned, or null if it hasn't been. */
   readonly scannedAt: string | null;
 }
 
@@ -137,7 +137,7 @@ export function createDemoWorkspaceService(): WorkspaceService {
 export type AgentDeclarationInput = Omit<DeclaredAgent, "id" | "declaredAt">;
 
 /**
- * Holds the workspace currently shown: empty until the user adds an agent or scans this Mac. It
+ * Holds the workspace currently shown: empty until the user adds an agent or scans this computer. It
  * never contains synthetic data. Everything lives in memory only. A failed scan or a rejected
  * declaration keeps the previous workspace.
  */
@@ -148,7 +148,7 @@ export interface WorkspaceSession {
   removeAgent(id: string): void;
 }
 
-/** Session whose scan reads this Mac's MCP client configs (read-only, in memory). */
+/** Session whose scan reads this computer's MCP client configs (read-only, in memory). */
 export function createLocalWorkspaceSession(homeDir: string): WorkspaceSession {
   return createWorkspaceSession(() => scanThisMac({ homeDir, now: new Date() }));
 }
@@ -214,7 +214,7 @@ function emptySnapshot(at: Date): Snapshot {
     snapshotId: "workspace:empty",
     collectedAt: at.toISOString(),
     dataOrigin: "import",
-    environmentLabel: "This Mac (not scanned yet)",
+    environmentLabel: "This computer (not scanned yet)",
     nodes: [],
     edges: [],
     connectorRuns: [],

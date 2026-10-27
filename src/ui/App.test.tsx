@@ -85,10 +85,10 @@ describe("dashboard shell", () => {
     const route = (path: RoutePath): Route => ({ path, params: new URLSearchParams() });
     const { unmount } = render(<Shell data={live} route={route("overview")} />);
     expect(screen.getByText(/No findings\. This covers only the sources/)).toBeTruthy();
-    expect(screen.getByText("LIVE · THIS MAC")).toBeTruthy();
+    expect(screen.getByText("LIVE · THIS COMPUTER")).toBeTruthy();
     unmount();
     render(<Shell data={live} route={route("integrations")} />);
-    expect(screen.getByText(/Local sources read files on this Mac only/)).toBeTruthy();
+    expect(screen.getByText(/Local sources read files on this computer only/)).toBeTruthy();
   });
 
   it("renders no secret-shaped text on any page", () => {
@@ -308,7 +308,7 @@ describe("starting empty", () => {
     window.location.hash = "#/integrations";
     const onChange = vi.fn();
     at("integrations", empty, onChange);
-    fireEvent.click(screen.getByRole("button", { name: "Scan this Mac" }));
+    fireEvent.click(screen.getByRole("button", { name: "Scan this computer" }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     expect(window.location.hash).toBe(href("graph", { scanned: "1" }));
   });

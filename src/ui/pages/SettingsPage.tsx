@@ -44,9 +44,11 @@ export function SettingsPage() {
       <section className="card" aria-labelledby="s-data">
         <h3 id="s-data">Data handling</h3>
         <ul className="plain-list">
-          <li>Read-only. AgentRadius never changes app configs, credentials, or macOS settings.</li>
+          <li>
+            Read-only. AgentRadius never changes app configs, credentials, or system settings.
+          </li>
           <li>Secret values are never stored or shown. Only where a credential is referenced.</li>
-          <li>Everything stays on this Mac and in memory. Nothing is uploaded.</li>
+          <li>Everything stays on this computer and in memory. Nothing is uploaded.</li>
           <li>Servers found in configs are never started, and their commands are never run.</li>
         </ul>
       </section>
