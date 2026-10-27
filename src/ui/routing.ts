@@ -8,10 +8,7 @@ export const PRIMARY_ROUTES = [
   { path: "remediation", label: "Remediation" },
 ] as const;
 
-export const SECONDARY_ROUTES = [
-  { path: "activity", label: "Activity log" },
-  { path: "settings", label: "Settings" },
-] as const;
+export const SECONDARY_ROUTES = [{ path: "settings", label: "Settings" }] as const;
 
 export const ROUTES = [...PRIMARY_ROUTES, ...SECONDARY_ROUTES] as const;
 
@@ -26,6 +23,7 @@ export interface Route {
 const MOVED: Readonly<Record<string, { path: RoutePath; params?: Record<string, string> }>> = {
   findings: { path: "remediation" },
   permissions: { path: "graph", params: { view: "permissions" } },
+  activity: { path: "overview" },
 };
 
 export function parseHash(hash: string): Route {

@@ -1,5 +1,4 @@
 import {
-  DEFAULT_ANALYSIS_SETTINGS,
   analyzeBlastRadius,
   analyzeFindings,
   permissionInventory,
@@ -53,8 +52,6 @@ export interface WorkspaceView {
   readonly reach: ReachMatrix;
   /** Agents the user described on the Integrations page. Unverified. */
   readonly declaredAgents: readonly DeclaredAgent[];
-  /** Session events, newest first. */
-  readonly activity: readonly ActivityEntry[];
   /** When this Mac was last scanned, or null if it hasn't been. */
   readonly scannedAt: string | null;
 }
@@ -118,7 +115,6 @@ export function createWorkspaceService(
         permissions: permissionInventory(graph),
         reach: reachMatrix(graph, settings, at),
         declaredAgents,
-        activity: [],
         scannedAt: graph.meta.dataOrigin === "local_discovery" ? graph.meta.collectedAt : null,
       };
     },
@@ -136,22 +132,6 @@ export function createWorkspaceService(
 /** The explicitly labeled synthetic workspace. */
 export function createDemoWorkspaceService(): WorkspaceService {
   return createWorkspaceService(DEMO_WORKSTATION_SNAPSHOT);
-}
-
-const MAX_ACTIVITY = 200;
-
-/** One session event. In memory only; lost when AgentRadius stops. */
-export interface ActivityEntry {
-  readonly id: string;
-  readonly at: string;
-  readonly actor: "You";
-  readonly action: "scan" | "add_agent" | "remove_agent";
-  readonly target: string;
-  readonly outcome: "succeeded" | "failed";
-  readonly summary: string;
-  /** Rescans of this Mac only: findings present before and gone now, and the reverse. */
-  readonly findingsResolved?: number;
-  readonly findingsNew?: number;
 }
 
 export type AgentDeclarationInput = Omit<DeclaredAgent, "id" | "declaredAt">;
@@ -183,20 +163,6 @@ export function createWorkspaceSession(
   let declared: readonly DeclaredAgent[] = [];
   let active = createWorkspaceService(base, now);
   let inFlight: Promise<void> | null = null;
-  const activity: ActivityEntry[] = [];
-  let sequence = 0;
-
-  const log = (entry: Omit<ActivityEntry, "id" | "at" | "actor">) => {
-    activity.unshift({
-      id: `act:${++sequence}`,
-      at: now().toISOString(),
-      actor: "You",
-      ...entry,
-    });
-    activity.length = Math.min(activity.length, MAX_ACTIVITY);
-  };
-  const findingIds = () =>
-    new Set(active.view(DEFAULT_ANALYSIS_SETTINGS).findings.map((f) => f.id));
 
   /** Builds first and commits only on success, so a rejected change leaves the session intact. */
   const commit = (nextBase: Snapshot, nextDeclared: readonly DeclaredAgent[]) => {
@@ -206,39 +172,12 @@ export function createWorkspaceSession(
   };
 
   return {
-    current: () => ({
-      ...active,
-      view: (settings) => ({ ...active.view(settings), activity: [...activity] }),
-    }),
+    current: () => active,
     scan() {
       inFlight ??= scanSnapshot()
         .then((raw) => {
           createWorkspaceService(raw, now);
-          const rescan = base.dataOrigin === "local_discovery";
-          const before = findingIds();
           commit(SnapshotSchema.parse(raw), declared);
-          const after = findingIds();
-          log({
-            action: "scan",
-            target: "This Mac",
-            outcome: "succeeded",
-            summary: `Found ${after.size} finding(s).`,
-            ...(rescan
-              ? {
-                  findingsResolved: [...before].filter((id) => !after.has(id)).length,
-                  findingsNew: [...after].filter((id) => !before.has(id)).length,
-                }
-              : {}),
-          });
-        })
-        .catch((error: unknown) => {
-          log({
-            action: "scan",
-            target: "This Mac",
-            outcome: "failed",
-            summary: "The scan failed. The previous data was kept.",
-          });
-          throw error;
         })
         .finally(() => {
           inFlight = null;
@@ -256,12 +195,6 @@ export function createWorkspaceSession(
         base,
         [...declared, agent].sort((a, b) => a.id.localeCompare(b.id)),
       );
-      log({
-        action: "add_agent",
-        target: input.name,
-        outcome: "succeeded",
-        summary: "Added an agent.",
-      });
     },
     removeAgent(id) {
       const agent = declared.find((a) => a.id === id);
@@ -270,12 +203,6 @@ export function createWorkspaceSession(
         base,
         declared.filter((a) => a.id !== id),
       );
-      log({
-        action: "remove_agent",
-        target: agent.name,
-        outcome: "succeeded",
-        summary: "Removed an agent.",
-      });
     },
   };
 }

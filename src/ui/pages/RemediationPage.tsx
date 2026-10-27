@@ -52,7 +52,6 @@ export function RemediationPage({ focusId }: { focusId: string | null }) {
         f.affectedEntityIds.some((id) => ws.label(id).toLowerCase().includes(q))),
   );
   const selected = findings.find((f) => f.id === focusId) ?? findings[0] ?? null;
-  const lastSync = ws.data.activity.find((a) => a.action === "scan" && a.outcome === "succeeded");
 
   return (
     <div className="page">
@@ -64,14 +63,7 @@ export function RemediationPage({ focusId }: { focusId: string | null }) {
       </header>
       <p className="note">
         AgentRadius can&apos;t change app or provider settings. Make the change where the access is
-        granted, then sync to confirm it&apos;s gone.
-        {lastSync?.findingsResolved !== undefined && (
-          <>
-            {" "}
-            Last sync resolved {lastSync.findingsResolved} and found {lastSync.findingsNew ?? 0}{" "}
-            new.
-          </>
-        )}
+        granted, then scan again to confirm it&apos;s gone.
       </p>
 
       {all.length === 0 ? (

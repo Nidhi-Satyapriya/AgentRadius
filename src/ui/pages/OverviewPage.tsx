@@ -3,7 +3,7 @@ import { DECLARED_CONNECTOR_ID } from "../../domain/core.ts";
 import { useAuth } from "../auth.tsx";
 import { SignInButton } from "../components/AccountMenu.tsx";
 import { SeverityBadge } from "../components/Badges.tsx";
-import { NavIcon } from "../components/NavIcon.tsx";
+import { NavIcon, type IconName } from "../components/NavIcon.tsx";
 import { Empty } from "../components/States.tsx";
 import { plural } from "../labels.ts";
 import { href, type RoutePath } from "../routing.ts";
@@ -11,7 +11,7 @@ import { useWorkspace } from "../workspace.tsx";
 
 const ATTENTION_LIMIT = 4;
 
-const FEATURES: readonly { icon: RoutePath; title: string; text: string; to: RoutePath }[] = [
+const FEATURES: readonly { icon: IconName; title: string; text: string; to: RoutePath }[] = [
   {
     icon: "integrations",
     title: "Discover MCP setups",
@@ -19,7 +19,7 @@ const FEATURES: readonly { icon: RoutePath; title: string; text: string; to: Rou
     to: "integrations",
   },
   {
-    icon: "activity",
+    icon: "pulse",
     title: "Add in-app agents",
     text: "Rovo, Copilot, Gemini, Slack AI and others live inside apps. Add them one by one.",
     to: "integrations",

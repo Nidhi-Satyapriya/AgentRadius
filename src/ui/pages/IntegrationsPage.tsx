@@ -105,7 +105,6 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
         <section className="card" aria-labelledby="catalog-title">
           <div className="card-head">
             <h3 id="catalog-title">Add agents one by one</h3>
-            <span className="muted small">Kept in memory · not verified</span>
           </div>
           <p className="muted">
             For assistants that live inside apps, which a scan of this Mac can&apos;t see. Choose

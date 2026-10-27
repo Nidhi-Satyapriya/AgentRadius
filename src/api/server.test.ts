@@ -284,20 +284,6 @@ describe("declared agents", () => {
       (await postJson("/api/v1/agents/remove", { id: "agent:declared.notion-ai" })).status,
     ).toBe(404);
   });
-
-  it("records accepted changes in the activity log, newest first, and never rejected input", async () => {
-    const res = await postJson("/api/v1/agents/remove", { id: "agent:declared.missing" });
-    expect(res.status).toBe(404);
-    const body = JSON.parse((await postJson("/api/v1/agents", { ...notion, name: "Rovo" })).body);
-    const activity = (body as WorkspaceResponse).activity;
-    expect(activity.slice(0, 3).map((a) => [a.action, a.target, a.outcome])).toEqual([
-      ["add_agent", "Rovo", "succeeded"],
-      ["remove_agent", "Notion AI", "succeeded"],
-      ["add_agent", "Notion AI", "succeeded"],
-    ]);
-    expect(JSON.stringify(activity)).not.toContain(SENTINEL.awsKeyId());
-    expect(JSON.stringify(activity)).not.toContain("<script>");
-  });
 });
 
 describe("Google sign-in", () => {

@@ -7,7 +7,6 @@ import { NavIcon } from "./components/NavIcon.tsx";
 import { RadiusMark } from "./components/RadiusMark.tsx";
 import { SourceStatus } from "./components/SourceControls.tsx";
 import { ErrorState, Loading } from "./components/States.tsx";
-import { ActivityPage } from "./pages/ActivityPage.tsx";
 import { BlastRadiusPage } from "./pages/BlastRadiusPage.tsx";
 import { GraphPage } from "./pages/GraphPage.tsx";
 import { IntegrationsPage } from "./pages/IntegrationsPage.tsx";
@@ -50,8 +49,6 @@ function Page({ route }: { route: Route }) {
     }
     case "remediation":
       return <RemediationPage focusId={p.get("finding")} />;
-    case "activity":
-      return <ActivityPage />;
     case "settings":
       return <SettingsPage />;
   }
