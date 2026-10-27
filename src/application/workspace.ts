@@ -17,6 +17,7 @@ import {
 import { declaredAgentsToGraph, scanThisMac, slug } from "../connectors/index.ts";
 import {
   MAX_DECLARED_AGENTS,
+  SCHEMA_VERSION,
   SnapshotSchema,
   type ConnectorRun,
   type DeclaredAgent,
@@ -54,6 +55,8 @@ export interface WorkspaceView {
   readonly declaredAgents: readonly DeclaredAgent[];
   /** Session events, newest first. */
   readonly activity: readonly ActivityEntry[];
+  /** When this Mac was last scanned, or null if it hasn't been. */
+  readonly scannedAt: string | null;
 }
 
 export class WorkspaceError extends Error {
@@ -116,6 +119,7 @@ export function createWorkspaceService(
         reach: reachMatrix(graph, settings, at),
         declaredAgents,
         activity: [],
+        scannedAt: graph.meta.dataOrigin === "local_discovery" ? graph.meta.collectedAt : null,
       };
     },
     blastRadius(startId, settings) {
@@ -141,7 +145,7 @@ export interface ActivityEntry {
   readonly id: string;
   readonly at: string;
   readonly actor: "You";
-  readonly action: "scan" | "use_demo" | "add_agent" | "remove_agent";
+  readonly action: "scan" | "add_agent" | "remove_agent";
   readonly target: string;
   readonly outcome: "succeeded" | "failed";
   readonly summary: string;
@@ -153,14 +157,13 @@ export interface ActivityEntry {
 export type AgentDeclarationInput = Omit<DeclaredAgent, "id" | "declaredAt">;
 
 /**
- * Holds the workspace currently shown: the demo fixture until the user asks for a scan, plus any
- * agents the user declared. Everything lives in memory only. A failed scan or a rejected
+ * Holds the workspace currently shown: empty until the user adds an agent or scans this Mac. It
+ * never contains synthetic data. Everything lives in memory only. A failed scan or a rejected
  * declaration keeps the previous workspace.
  */
 export interface WorkspaceSession {
   current(): WorkspaceService;
   scan(): Promise<void>;
-  useDemo(): void;
   declareAgent(input: AgentDeclarationInput): void;
   removeAgent(id: string): void;
 }
@@ -173,10 +176,12 @@ export function createLocalWorkspaceSession(homeDir: string): WorkspaceSession {
 export function createWorkspaceSession(
   scanSnapshot: () => Promise<unknown>,
   now: () => Date = () => new Date(),
+  /** Tests only. The app always starts from the empty workspace. */
+  initial?: Snapshot,
 ): WorkspaceSession {
-  let base: Snapshot = DEMO_WORKSTATION_SNAPSHOT;
+  let base: Snapshot = initial ?? emptySnapshot(now());
   let declared: readonly DeclaredAgent[] = [];
-  let active = createDemoWorkspaceService();
+  let active = createWorkspaceService(base, now);
   let inFlight: Promise<void> | null = null;
   const activity: ActivityEntry[] = [];
   let sequence = 0;
@@ -240,15 +245,6 @@ export function createWorkspaceSession(
         });
       return inFlight;
     },
-    useDemo() {
-      commit(DEMO_WORKSTATION_SNAPSHOT, declared);
-      log({
-        action: "use_demo",
-        target: "Demo data",
-        outcome: "succeeded",
-        summary: "Switched to demo data.",
-      });
-    },
     declareAgent(input) {
       const id = `agent:declared.${slug(input.name)}`;
       if (declared.some((a) => a.id === id))
@@ -281,6 +277,20 @@ export function createWorkspaceSession(
         summary: "Removed an agent.",
       });
     },
+  };
+}
+
+/** The starting workspace: nothing scanned, nothing added. */
+function emptySnapshot(at: Date): Snapshot {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    snapshotId: "workspace:empty",
+    collectedAt: at.toISOString(),
+    dataOrigin: "import",
+    environmentLabel: "This Mac (not scanned yet)",
+    nodes: [],
+    edges: [],
+    connectorRuns: [],
   };
 }
 

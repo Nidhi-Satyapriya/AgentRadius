@@ -21,6 +21,16 @@ export interface HealthResponse {
 
 export type WorkspaceResponse = WorkspaceView;
 
+export interface AuthResponse {
+  readonly provider: "google";
+  /** False until a Google OAuth client is set in the environment. */
+  readonly configured: boolean;
+  /** The address to register with Google as the authorized redirect URI. */
+  readonly redirectUri: string;
+  /** Who is signed in. Identity only: AgentRadius gets no access to Google data. */
+  readonly user: { readonly name: string; readonly email: string } | null;
+}
+
 export type DeclareAgentRequest = AgentDeclarationInput;
 
 export interface BlastRadiusRequest {

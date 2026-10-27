@@ -6,7 +6,14 @@ import type { ZodType } from "zod";
 import { DEFAULT_ANALYSIS_SETTINGS } from "../analysis/index.ts";
 import { WorkspaceError, type WorkspaceSession } from "../application/workspace.ts";
 import { MAX_REQUEST_BYTES } from "./config.ts";
-import { API_PREFIX, type HealthResponse } from "./contracts.ts";
+import { API_PREFIX, type AuthResponse, type HealthResponse } from "./contracts.ts";
+import {
+  createGoogleAuth,
+  readCookie,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_S,
+  type GoogleAuth,
+} from "./googleAuth.ts";
 import { applySecurityHeaders, HttpError, readJsonBody, sendError, sendJson } from "./http.ts";
 import {
   BlastRadiusRequestSchema,
@@ -21,6 +28,8 @@ export interface ApiServerOptions {
   readonly staticDir?: string;
   /** Extra origins allowed to POST (e.g. the Vite dev server). */
   readonly extraAllowedOrigins?: readonly string[];
+  /** Optional Google sign-in. Without it, sign-in is reported as not configured. */
+  readonly auth?: GoogleAuth;
 }
 
 const LOOPBACK_HOSTS = ["127.0.0.1", "localhost"];
@@ -35,9 +44,10 @@ const MIME: Record<string, string> = {
 };
 
 export function createApiServer(session: WorkspaceSession, options: ApiServerOptions = {}): Server {
+  const auth = options.auth ?? createGoogleAuth(null);
   const server = createServer((req, res) => {
     applySecurityHeaders(res);
-    handle(server, session, options, req, res).catch((error: unknown) => {
+    handle(server, session, auth, options, req, res).catch((error: unknown) => {
       if (error instanceof HttpError) return sendError(res, error);
       // Never leak internals: log a generic marker server-side, return a generic error.
       console.error(
@@ -53,6 +63,7 @@ export function createApiServer(session: WorkspaceSession, options: ApiServerOpt
 async function handle(
   server: Server,
   session: WorkspaceSession,
+  auth: GoogleAuth,
   options: ApiServerOptions,
   req: IncomingMessage,
   res: ServerResponse,
@@ -95,11 +106,37 @@ async function handle(
       }
       return sendJson(res, 200, session.current().view(DEFAULT_ANALYSIS_SETTINGS));
     }
-    case "POST /demo": {
+    case "GET /auth": {
+      return sendJson(
+        res,
+        200,
+        authBody(auth, port, auth.user(readCookie(req.headers.cookie, SESSION_COOKIE))),
+      );
+    }
+    case "GET /auth/google/start": {
+      if (!auth.configured)
+        throw new HttpError(503, "sign_in_not_configured", "Google sign-in is not set up");
+      const returnTo = url.searchParams.get("return") ?? ownOrigin(port);
+      if (!allowedOrigins(port, options).includes(returnTo))
+        throw new HttpError(400, "invalid_return", "Invalid return address");
+      return redirect(res, auth.begin(returnTo));
+    }
+    case "GET /auth/google/callback": {
+      const result = await auth.complete(url.searchParams);
+      if ("error" in result)
+        return redirect(res, `${result.returnTo ?? ownOrigin(port)}/#/overview?signin=failed`);
+      res.setHeader(
+        "Set-Cookie",
+        `${SESSION_COOKIE}=${result.sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE_S}`,
+      );
+      return redirect(res, `${result.returnTo}/#/integrations`);
+    }
+    case "POST /auth/logout": {
       assertSameOrigin(req, port, options);
       parse(EmptyRequestSchema, await readJsonBody(req, MAX_REQUEST_BYTES));
-      session.useDemo();
-      return sendJson(res, 200, session.current().view(DEFAULT_ANALYSIS_SETTINGS));
+      auth.signOut(readCookie(req.headers.cookie, SESSION_COOKIE));
+      res.setHeader("Set-Cookie", `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
+      return sendJson(res, 200, authBody(auth, port, null));
     }
     case "POST /agents": {
       assertSameOrigin(req, port, options);
@@ -152,12 +189,37 @@ function assertSameOrigin(
   }
   const origin = req.headers.origin;
   if (origin === undefined) return;
-  const allowed = [
+  if (!allowedOrigins(port, options).includes(origin))
+    throw new HttpError(403, "cross_origin_request", "Origin not allowed");
+}
+
+function allowedOrigins(port: number | undefined, options: ApiServerOptions): string[] {
+  return [
     ...LOOPBACK_HOSTS.map((h) => `http://${h}:${port}`),
     ...(options.extraAllowedOrigins ?? []),
   ];
-  if (!allowed.includes(origin))
-    throw new HttpError(403, "cross_origin_request", "Origin not allowed");
+}
+
+const ownOrigin = (port: number | undefined) => `http://127.0.0.1:${port}`;
+
+function authBody(
+  auth: GoogleAuth,
+  port: number | undefined,
+  user: AuthResponse["user"],
+): AuthResponse {
+  return {
+    provider: "google",
+    configured: auth.configured,
+    redirectUri: `${ownOrigin(port)}${API_PREFIX}/auth/google/callback`,
+    user,
+  };
+}
+
+function redirect(res: ServerResponse, location: string): void {
+  res.statusCode = 302;
+  res.setHeader("Location", location);
+  res.setHeader("Cache-Control", "no-store");
+  res.end();
 }
 
 function parse<T>(schema: ZodType<T>, body: unknown): T {

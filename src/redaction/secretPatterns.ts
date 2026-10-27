@@ -28,6 +28,16 @@ export const SECRET_PATTERNS: readonly SecretPattern[] = [
   },
   { id: "google-api-key", description: "Google API key", regex: /\bAIza[0-9A-Za-z_-]{35}\b/ },
   {
+    id: "google-oauth-client-secret",
+    description: "Google OAuth client secret",
+    regex: /\bGOCSPX-[A-Za-z0-9_-]{20,}/,
+  },
+  {
+    id: "google-oauth-access-token",
+    description: "Google OAuth access token",
+    regex: /\bya29\.[A-Za-z0-9_-]{20,}/,
+  },
+  {
     id: "llm-provider-key",
     description: "LLM provider API key",
     regex: /\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}\b/,

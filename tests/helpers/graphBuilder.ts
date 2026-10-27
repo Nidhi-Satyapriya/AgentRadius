@@ -71,6 +71,8 @@ export function graphOf(nodes: GraphNode[], edges: GraphEdge[]): GraphIndex {
 export const SENTINEL = {
   githubToken: () => ["gh", "p_", "Z".repeat(36)].join(""),
   awsKeyId: () => ["AK", "IA", "Z".repeat(16)].join(""),
+  googleClientSecret: () => ["GOC", "SPX-", "Z".repeat(28)].join(""),
+  googleAccessToken: () => ["ya", "29.", "Z".repeat(40)].join(""),
   privateKeyHeader: () => ["-----BEGIN ", "RSA ", "PRIVATE KEY-----"].join(""),
   urlWithPassword: () =>
     ["postgres://", "user", ":", "not-a-real-password", "@db.invalid/x"].join(""),

@@ -25,6 +25,14 @@ describe("scanForSecrets", () => {
     expect(ids).toEqual(expect.arrayContaining(["private-key-block", "url-embedded-credentials"]));
   });
 
+  it("detects Google OAuth client secrets and access tokens", () => {
+    const ids = scanForSecrets([
+      SENTINEL.googleClientSecret(),
+      SENTINEL.googleAccessToken(),
+    ]).flatMap((f) => f.patternIds);
+    expect(ids).toEqual(["google-oauth-client-secret", "google-oauth-access-token"]);
+  });
+
   it("does not flag credential references such as secret-manager URIs or env var names", () => {
     expect(
       scanForSecrets({

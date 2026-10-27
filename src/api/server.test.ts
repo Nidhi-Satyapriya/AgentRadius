@@ -5,10 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SENTINEL } from "../../tests/helpers/graphBuilder.ts";
+import { DEFAULT_ANALYSIS_SETTINGS } from "../analysis/index.ts";
 import { createWorkspaceSession } from "../application/workspace.ts";
 import { scanThisMac } from "../connectors/index.ts";
+import { DEMO_WORKSTATION_SNAPSHOT } from "../fixtures/demoWorkstation.ts";
 import { scanForSecrets } from "../redaction/index.ts";
-import type { BlastRadiusResponse, WorkspaceResponse } from "./contracts.ts";
+import type { AuthResponse, BlastRadiusResponse, WorkspaceResponse } from "./contracts.ts";
+import { createGoogleAuth, type FetchLike } from "./googleAuth.ts";
 import { createApiServer } from "./server.ts";
 
 const staticDir = mkdtempSync(join(tmpdir(), "agentradius-ui-"));
@@ -29,8 +32,9 @@ writeFileSync(
   }),
 );
 let scanner: () => Promise<unknown> = () => scanThisMac({ homeDir: fakeHome, now: new Date() });
+// Analysis endpoints are exercised against the labeled fixture; the app itself starts empty.
 const server = createApiServer(
-  createWorkspaceSession(() => scanner()),
+  createWorkspaceSession(() => scanner(), undefined, DEMO_WORKSTATION_SNAPSHOT),
   { staticDir },
 );
 let port = 0;
@@ -78,6 +82,17 @@ const postJson = (path: string, payload: unknown, headers: Record<string, string
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(payload),
   });
+
+describe("starting workspace", () => {
+  it("starts empty, with no synthetic data, until the user adds or scans something", () => {
+    const view = createWorkspaceSession(async () => ({}))
+      .current()
+      .view(DEFAULT_ANALYSIS_SETTINGS);
+    expect(view.meta.dataOrigin).not.toBe("fixture");
+    expect([view.nodes, view.edges, view.findings, view.connectorRuns]).toEqual([[], [], [], []]);
+    expect(view.scannedAt).toBeNull();
+  });
+});
 
 describe("API", () => {
   it("reports read-only mode with no active enforcement", async () => {
@@ -203,6 +218,7 @@ describe("API", () => {
     expect(res.status).toBe(200);
     const body = JSON.parse(res.body) as WorkspaceResponse;
     expect(body.meta.dataOrigin).toBe("local_discovery");
+    expect(body.scannedAt).toBe(body.meta.collectedAt);
     expect(body.nodes.some((n) => n.id === "mcp:cursor.github")).toBe(true);
     expect(res.body).not.toContain(SENTINEL.githubToken());
     expect(scanForSecrets(body)).toEqual([]);
@@ -222,20 +238,11 @@ describe("API", () => {
     expect(after.meta.snapshotId).toBe(before.meta.snapshotId);
   });
 
-  it("switches back to demo data and protects source switches against CSRF", async () => {
+  it("protects scans against CSRF and has no way to switch to demo data", async () => {
     expect((await postJson("/api/v1/scans", {}, { origin: "https://evil.example" })).status).toBe(
       403,
     );
-    expect(
-      (
-        await call("POST", "/api/v1/demo", {
-          headers: { "content-type": "text/plain" },
-          body: "{}",
-        })
-      ).status,
-    ).toBe(415);
-    const res = await postJson("/api/v1/demo", {});
-    expect((JSON.parse(res.body) as WorkspaceResponse).meta.dataOrigin).toBe("fixture");
+    expect((await postJson("/api/v1/demo", {})).status).toBe(404);
   });
 
   it("does not expose internals in error responses", async () => {
@@ -290,5 +297,105 @@ describe("declared agents", () => {
     ]);
     expect(JSON.stringify(activity)).not.toContain(SENTINEL.awsKeyId());
     expect(JSON.stringify(activity)).not.toContain("<script>");
+  });
+});
+
+describe("Google sign-in", () => {
+  const calls: string[] = [];
+  const fakeGoogle: FetchLike = async (url, init) => {
+    calls.push(url);
+    if (url.endsWith("/token")) {
+      const form = new URLSearchParams(String(init?.body));
+      if (form.get("code") !== "good-code" || !form.get("code_verifier"))
+        return new Response("{}", { status: 400 });
+      return Response.json({ access_token: SENTINEL.googleAccessToken() });
+    }
+    return Response.json({ email: "dev@example.com", email_verified: true, name: "Dev User" });
+  };
+  const authServer = createApiServer(
+    createWorkspaceSession(async () => ({})),
+    {
+      auth: createGoogleAuth(
+        {
+          clientId: "client.apps.example",
+          clientSecret: SENTINEL.googleClientSecret(),
+          redirectUri: "http://127.0.0.1/cb",
+        },
+        fakeGoogle,
+      ),
+    },
+  );
+  let authPort = 0;
+  beforeAll(async () => {
+    await new Promise<void>((done) => authServer.listen(0, "127.0.0.1", done));
+    authPort = (authServer.address() as AddressInfo).port;
+  });
+  afterAll(() => new Promise<void>((done) => authServer.close(() => done())));
+
+  const get = (path: string, cookie?: string) =>
+    new Promise<Reply>((resolve, reject) => {
+      const req = request(
+        {
+          host: "127.0.0.1",
+          port: authPort,
+          path,
+          headers: { host: `127.0.0.1:${authPort}`, ...(cookie ? { cookie } : {}) },
+        },
+        (res) => {
+          let body = "";
+          res.on("data", (c: Buffer) => (body += c.toString()));
+          res.on("end", () => resolve({ status: res.statusCode ?? 0, headers: res.headers, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+
+  it("reports sign-in as not set up when no Google client is configured", async () => {
+    const auth = JSON.parse((await call("GET", "/api/v1/auth")).body) as AuthResponse;
+    expect(auth).toMatchObject({ provider: "google", configured: false, user: null });
+    expect(auth.redirectUri).toMatch(
+      /^http:\/\/127\.0\.0\.1:\d+\/api\/v1\/auth\/google\/callback$/,
+    );
+    expect((await call("GET", "/api/v1/auth/google/start")).status).toBe(503);
+  });
+
+  it("signs in with PKCE and state, keeps identity only, and never exposes tokens", async () => {
+    const start = await get("/api/v1/auth/google/start");
+    expect(start.status).toBe(302);
+    const google = new URL(String(start.headers.location));
+    expect(google.origin).toBe("https://accounts.google.com");
+    expect(google.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(google.searchParams.get("scope")).toBe("openid email profile");
+    const state = google.searchParams.get("state")!;
+
+    const forged = await get("/api/v1/auth/google/callback?state=forged&code=good-code");
+    expect(String(forged.headers.location)).toMatch(/signin=failed/);
+    expect(forged.headers["set-cookie"]).toBeUndefined();
+
+    const done = await get(`/api/v1/auth/google/callback?state=${state}&code=good-code`);
+    expect(done.status).toBe(302);
+    const cookie = String(done.headers["set-cookie"]);
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Lax/);
+    expect(cookie).not.toContain(SENTINEL.googleAccessToken());
+    const session = cookie.split(";")[0]!;
+
+    const me = await get("/api/v1/auth", session);
+    expect(JSON.parse(me.body)).toMatchObject({
+      provider: "google",
+      configured: true,
+      user: { name: "Dev User", email: "dev@example.com" },
+    });
+    expect(me.body).not.toContain(SENTINEL.googleAccessToken());
+    expect(me.body).not.toContain(SENTINEL.googleClientSecret());
+
+    const replay = await get(`/api/v1/auth/google/callback?state=${state}&code=good-code`);
+    expect(String(replay.headers.location)).toMatch(/signin=failed/);
+  });
+
+  it("rejects return addresses outside this app", async () => {
+    const res = await get("/api/v1/auth/google/start?return=https://evil.example");
+    expect(res.status).toBe(400);
   });
 });
