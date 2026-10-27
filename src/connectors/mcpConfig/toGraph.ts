@@ -1,4 +1,5 @@
 import type {
+  Action,
   Assertion,
   Attributes,
   CollectionMethod,
@@ -9,11 +10,26 @@ import type {
   GraphNode,
   NodeType,
 } from "../../domain/index.ts";
+import {
+  folderArgs,
+  matchLocalCapability,
+  SERVICE_ACTIONS,
+  type LocalCapability,
+} from "./capabilities.ts";
 import type { McpClient } from "./clients.ts";
 import { matchService, type ServiceMatch } from "./knownServices.ts";
 import type { NamedKey, ServerDeclaration } from "./parse.ts";
 
 export const LOCAL_BOUNDARY_ID = "tb:this-mac";
+
+const ACTION_EDGE: Readonly<Record<Action, EdgeType>> = {
+  read: "CAN_READ",
+  write: "CAN_WRITE",
+  delete: "CAN_DELETE",
+  execute: "CAN_EXECUTE",
+  admin: "CAN_ADMIN",
+};
+const CAPABILITY_RULE = "known-mcp-capabilities";
 
 export interface ParsedFile {
   /** Display path with the home directory shortened to `~`. */
@@ -168,11 +184,20 @@ export function clientToGraph(observation: ClientObservation): {
       serverCount++;
       const evidence = `${file.displayPath}#${server.pointer}`;
       const serverId = uniqueId(`mcp:${client.id}.${slug(server.name)}`, usedIds);
-      const match = matchService({
+      const saas = matchService({
         ...(server.packageName !== undefined ? { packageName: server.packageName } : {}),
         ...(server.remoteHost !== undefined ? { remoteHost: server.remoteHost } : {}),
         serverName: server.name,
       });
+      const local = matchLocalCapability({
+        ...(server.packageName !== undefined ? { packageName: server.packageName } : {}),
+        serverName: server.name,
+      });
+      // The strongest evidence wins: a host or package match beats a server-name hint.
+      const useLocal =
+        local !== undefined &&
+        (saas === undefined || (saas.kind === "name" && local.kind === "package"));
+      const match = useLocal ? undefined : saas;
       g.node(serverId, "MCPServer", server.name, evidence, {
         boundary: LOCAL_BOUNDARY_ID,
         description: describeServer(server, client.label),
@@ -208,7 +233,9 @@ export function clientToGraph(observation: ClientObservation): {
       }
 
       const remoteHost = server.remoteHost;
-      if (match !== undefined) {
+      if (useLocal) {
+        addLocalCapability(g, serverId, server, local.capability, local.kind, evidence);
+      } else if (match !== undefined) {
         const { service, kind } = match;
         const tbId = `tb:saas.${service.id}`;
         const resId = `res:saas.${service.id}`;
@@ -216,7 +243,7 @@ export function clientToGraph(observation: ClientObservation): {
         g.node(resId, "Resource", `${service.label} — data reachable through MCP`, evidence, {
           boundary: tbId,
           description:
-            "What the agent can actually do here depends on the account and token behind the server, which AgentRadius has not collected yet.",
+            "Read and write access is inferred from what this server usually offers. What it can actually do depends on the account and token behind it, which AgentRadius has not checked.",
           attributes: service.arbitraryEgress === true ? { networkEgress: true } : {},
         });
         const ev = MATCH_EVIDENCE[kind];
@@ -226,6 +253,14 @@ export function clientToGraph(observation: ClientObservation): {
           ...(ev.rule !== undefined ? { inferenceRule: ev.rule } : {}),
           attributes: { matchedBy: kind },
         });
+        for (const action of SERVICE_ACTIONS[service.id] ?? []) {
+          g.edge(serverId, ACTION_EDGE[action], resId, evidence, {
+            assertion: "inferred",
+            confidence: kind === "name" ? "low" : "medium",
+            inferenceRule: CAPABILITY_RULE,
+            attributes: { matchedBy: kind },
+          });
+        }
       } else if (remoteHost !== undefined) {
         const tbId = `tb:remote.${slug(remoteHost)}`;
         const resId = `res:remote.${slug(remoteHost)}`;
@@ -238,6 +273,38 @@ export function clientToGraph(observation: ClientObservation): {
     }
   }
   return { nodes: [...g.nodes.values()], edges: [...g.edges.values()], serverCount };
+}
+
+function addLocalCapability(
+  g: GraphBuilder,
+  serverId: string,
+  server: ServerDeclaration,
+  capability: LocalCapability,
+  kind: "package" | "name",
+  evidence: string,
+): void {
+  const folders = capability.scopedToFolderArgs ? folderArgs(server.args, server.packageName) : [];
+  const targets =
+    folders.length > 0
+      ? folders.map((f) => ({
+          id: `res:local.${capability.id}.${slug(f)}`,
+          label: `Files in ${f}`,
+        }))
+      : [{ id: `res:local.${capability.id}`, label: capability.label }];
+  for (const t of targets) {
+    g.node(t.id, "Resource", t.label, evidence, {
+      boundary: LOCAL_BOUNDARY_ID,
+      description: `${capability.description} Based on what this kind of server usually offers; AgentRadius did not start it.`,
+    });
+    for (const action of capability.actions) {
+      g.edge(serverId, ACTION_EDGE[action], t.id, evidence, {
+        assertion: "inferred",
+        confidence: kind === "name" ? "low" : "medium",
+        inferenceRule: CAPABILITY_RULE,
+        attributes: { matchedBy: kind },
+      });
+    }
+  }
 }
 
 function uniqueId(base: string, used: Set<string>): string {

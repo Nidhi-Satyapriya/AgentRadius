@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SENTINEL } from "../../../tests/helpers/graphBuilder.ts";
-import { analyzeFindings, DEFAULT_ANALYSIS_SETTINGS } from "../../analysis/index.ts";
+import {
+  analyzeBlastRadius,
+  analyzeFindings,
+  DEFAULT_ANALYSIS_SETTINGS,
+} from "../../analysis/index.ts";
 import { ingestSnapshot } from "../../graph/index.ts";
 import { scanForSecrets } from "../../redaction/index.ts";
 import { scanThisMac } from "../index.ts";
@@ -24,6 +28,47 @@ function home(files: Record<string, string>): string {
 
 const CURSOR = ".cursor/mcp.json";
 const VSCODE = "Library/Application Support/Code/User/mcp.json";
+
+describe("what known MCP servers can do", () => {
+  it("infers read, write, and command access without starting anything", async () => {
+    const dir = home({
+      [CURSOR]: JSON.stringify({
+        mcpServers: {
+          files: {
+            command: "npx",
+            args: ["-y", "@modelcontextprotocol/server-filesystem", "~/Projects", "/tmp/shared"],
+          },
+          commander: { command: "npx", args: ["-y", "@wonderwhy-er/desktop-commander"] },
+          github: { command: "npx", args: ["-y", "@modelcontextprotocol/server-github"] },
+        },
+      }),
+    });
+    const ingested = ingestSnapshot(await scanThisMac({ homeDir: dir, now: NOW }));
+    expect(ingested.ok).toBe(true);
+    if (!ingested.ok) return;
+    const report = analyzeBlastRadius(
+      ingested.graph,
+      "agent:cursor",
+      DEFAULT_ANALYSIS_SETTINGS,
+      NOW.toISOString(),
+    );
+    const reach = Object.fromEntries(
+      report.impacts.map((i) => [i.resourceId, i.actions.map((a) => a.action).sort()]),
+    );
+    expect(reach).toEqual({
+      "res:local.files.projects": ["read", "write"],
+      "res:local.files.tmp-shared": ["read", "write"],
+      "res:local.shell": ["execute", "read", "write"],
+      "res:saas.github": ["read", "write"],
+    });
+    const inferred = [...ingested.graph.edges.values()].filter(
+      (e) => e.inferenceRule === "known-mcp-capabilities",
+    );
+    expect(inferred.length).toBeGreaterThan(0);
+    expect(inferred.every((e) => e.assertion === "inferred")).toBe(true);
+    expect(ingested.graph.nodes.get("res:local.files.projects")?.label).toBe("Files in ~/Projects");
+  });
+});
 
 describe("local MCP configuration scan", () => {
   it("builds a valid, secret-free snapshot from real config shapes", async () => {
