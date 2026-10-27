@@ -1,8 +1,8 @@
 # AgentRadius
 
-A local-first security tool for your Mac. It shows **what each AI agent can reach** (through which MCP servers, credentials, and cloud roles), **how sure it is**, and **what actually stops it**.
+A local-first security tool for your computer (macOS first; Windows and Linux config locations are supported but not yet field-tested). It shows **what each AI agent can reach** (through which MCP servers, credentials, and cloud roles), **how sure it is**, and **what actually stops it**.
 
-> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this Mac** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf); values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions (GitHub, AWS, Atlassian, and others) are not collected yet, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
+> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this computer** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf) on macOS, Windows, or Linux; values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions (GitHub, AWS, Atlassian, and others) are not collected yet, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
 
 ## Quick start
 
@@ -43,14 +43,14 @@ npm run check
 
 ## What you can do today
 
-The top bar has five areas: Overview, Integrations, Permission Graph, Blast Radius, and Remediation. Activity log, Settings, the scan status, and sign-in sit on the right.
+The top bar has five areas: Overview, Integrations, Permission Graph, Blast Radius, and Remediation. Settings, the scan status, and sign-in sit on the right.
 
 - **Overview.** What AgentRadius does, a "get started" checklist (sign in, add agents, scan, see the map, remediate), and, once there is data, counts and the findings that need attention.
-- **Integrations.** Add agents one by one from a catalog (Atlassian Rovo, Gemini in Google Workspace, Microsoft 365 Copilot, Notion AI, Slack AI, GitHub Copilot, and others) or as a custom agent. Then scan this Mac. Only what you add or scan is listed, with status, access method, last sync, items found, and risk. Added agents are labeled as declared by you and kept in memory only.
+- **Integrations.** Add agents one by one from a catalog (Atlassian Rovo, Gemini in Google Workspace, Microsoft 365 Copilot, Notion AI, Slack AI, GitHub Copilot, and others) or as a custom agent. Then scan this Mac. Only what you add or scan is listed, with status, access method, last sync, items found, and risk. By default an added agent is assumed to reach whatever you can in its apps, because in-app assistants act as you. You can narrow that to read only. Recognized MCP servers (GitHub, Slack, filesystem, shell, and others) show what they can typically read, change, or run, labeled as inferred.
 - **Permission Graph.** Opens right after a scan. A strip explains how to read it (agents → servers and tools → credentials → your data). Graph, relationship list, and direct-permission views, with filters, zoom, pan, and keyboard support. Under the graph, each agent's blast radius is summarized, followed by a link to remediate the findings.
-- **Blast Radius.** Pick an entity, assume it is compromised, and get a one-sentence summary and the resources it could read, change, delete, run, or administer. Each row expands to its path or opens it in the graph. Ways to reduce exposure are measured on an in-memory copy and can be previewed. The page ends with a link to Remediation.
-- **Remediation.** Findings ranked by severity, each with what's affected, the evidence path, the recommended action, and a dry-run preview. AgentRadius cannot change provider settings. Make the change where access is granted, then scan again. The Activity log shows how many findings each scan resolved.
-- **Activity log and Settings.** What was done this session (in memory only), sign-in setup, analysis defaults, data handling, and the controls your sources recorded. There is no policy engine, and nothing is blocked.
+- **Blast Radius.** Riskiest agents are ranked first. Pick one and see its reach in three boxes: can delete, run, or administer; can change; can read. Each resource shows a short chain of how it is reached, with details and graph links. Fix-first cards preview how much each change shrinks reach. When nothing is reachable, the page says why. Analysis settings and what-if grants are under Advanced.
+- **Remediation.** Findings ranked by severity, each with what's affected, the evidence path, the recommended action, and a dry-run preview. AgentRadius cannot change provider settings. Make the change where access is granted, then scan again.
+- **Settings.** Sign-in setup, analysis defaults, data handling, and the controls your sources recorded. There is no policy engine, and nothing is blocked.
 
 ## Principles
 

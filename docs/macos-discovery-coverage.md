@@ -1,6 +1,6 @@
 # macOS discovery coverage
 
-**Current state: one live connector, MCP client configs.** The dashboard starts with the synthetic fixture. It reads this Mac only when you click **Scan this Mac**. Every other connector below is a proposal ([ADR 0008](./adr/0008-read-only-macos-discovery.md)) and needs the user's approval before it is built.
+**Current state: one live connector, MCP client configs, on macOS, Windows, and Linux** ([ADR 0011](./adr/0011-cross-platform-discovery-and-capability-catalog.md)). The dashboard starts empty. It reads this computer only when you click **Scan this computer**. Every other connector below is a proposal ([ADR 0008](./adr/0008-read-only-macos-discovery.md)) and needs the user's approval before it is built.
 
 ## Live: MCP client configuration connector
 
@@ -12,12 +12,23 @@
 | Claude Code    | `.claude.json`: only the `mcpServers` keys (user scope and per-project scope)                                 | Other keys in that file are parsed in memory but never read or kept |
 | Windsurf       | `.codeium/windsurf/mcp_config.json`                                                                           |                                                                     |
 
+Windows and Linux use these locations instead (all relative to the home folder; not yet tested on those systems):
+
+| Client         | Windows                                                  | Linux                                            |
+| -------------- | -------------------------------------------------------- | ------------------------------------------------ |
+| Cursor         | same as macOS                                            | same as macOS                                    |
+| VS Code        | `AppData/Roaming/Code/User/mcp.json` and `settings.json` | `.config/Code/User/mcp.json` and `settings.json` |
+| Claude Desktop | `AppData/Roaming/Claude/claude_desktop_config.json`      | not available on Linux; skipped                  |
+| Claude Code    | same as macOS                                            | same as macOS                                    |
+| Windsurf       | same as macOS                                            | same as macOS                                    |
+
+- **What servers can do:** for recognized servers, read, write, and run-command access is inferred from a built-in catalog (`known-mcp-capabilities`). Filesystem servers are scoped to the folders listed in their arguments, which are recorded as text and never opened.
 - **Collected:** server names, transport, command and arguments (secret-shaped values, secret flags, URL credentials, and query strings removed), remote host, package source and version pin, environment variable and header **names**, and where each credential value is stored: plain text, secret-manager reference, prompted input, environment, or key file.
 - **Never collected:** environment variable values, header values, tokens, and any other key in these files.
 - **Never done:** starting a server, running a configured command, following paths found in a config, or writing any file.
 - **Reported failures:** missing file (reported as nothing found, not as a failure), permission denied (`requires_permission`), invalid JSON (`failed`, with no file content in the message), file over 1 MB, or a path that is not a regular file.
 - **SaaS identification:** a remote host match counts as declared evidence. A package-name match is inferred (`known-mcp-package`, medium confidence), and a server-name match is inferred (`mcp-server-name-hint`, low confidence). A match shows where requests go, not what the server can do there.
-- **Retention:** in memory only, replaced on rescan, and discarded when the API process exits or you click **Show demo data**.
+- **Retention:** in memory only, replaced on rescan, and discarded when the API process exits.
 
 Columns:
 
