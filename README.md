@@ -2,7 +2,7 @@
 
 A local-first security tool for your Mac. It shows **what each AI agent can reach** (through which MCP servers, credentials, and cloud roles), **how sure it is**, and **what actually stops it**.
 
-> **Current state: read-only.** The dashboard opens on a labeled synthetic workstation. Click **Scan this Mac** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf); values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions (GitHub, AWS, Atlassian, and others) are not collected yet, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
+> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this Mac** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf); values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions (GitHub, AWS, Atlassian, and others) are not collected yet, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
 
 ## Quick start
 
@@ -19,6 +19,22 @@ Production-style:
 npm run build && npm start   # UI and API on http://127.0.0.1:4317
 ```
 
+### Optional: sign in with Google
+
+Sign-in only identifies you (name and email). It requests no access to Gmail, Drive, or any other Google data, and no Google token is kept. See [ADR 0010](docs/adr/0010-optional-google-sign-in.md).
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **Web application**.
+2. Add the authorized redirect URI `http://127.0.0.1:4317/api/v1/auth/google/callback`.
+3. Start AgentRadius with the client ID and secret in its environment. Don't commit them.
+
+   ```sh
+   export AGENTRADIUS_GOOGLE_CLIENT_ID="<client id>"
+   export AGENTRADIUS_GOOGLE_CLIENT_SECRET="<client secret>"
+   npm run dev   # or: npm run build && npm start
+   ```
+
+Without these variables, sign-in shows as not set up and everything else works.
+
 Quality gate (typecheck, lint, format, all tests):
 
 ```sh
@@ -27,14 +43,14 @@ npm run check
 
 ## What you can do today
 
-The sidebar has five areas: Overview, Integrations, Permission Graph, Blast Radius, and Remediation. Activity log and Settings sit below them.
+The top bar has five areas: Overview, Integrations, Permission Graph, Blast Radius, and Remediation. Activity log, Settings, the scan status, and sign-in sit on the right.
 
-- **Overview.** Counts, the findings that need attention, and how much the sources can't see.
-- **Integrations.** One searchable table of every source, with status, access method, last sync, items found, and risk. Select a row for what it read, what access it needed, its blind spots, and any errors with the next step. Add agents that discovery cannot see, such as Atlassian Rovo, Gemini in Gmail, Notion AI, Slack AI, or a custom bot. They are analyzed like discovered agents, labeled as declared by you, and kept in memory only. Account sign-in (GitHub, Atlassian, Google, and others) is listed as not available, never as connected.
-- **Permission Graph.** Graph, relationship list, and direct-permission views. Filter by source, findings, type, and evidence. Zoom, pan, fit, and reset, all with keyboard support. Line style shows whether a relationship was observed, declared, inferred, or is unknown. Links from findings open with the evidence path highlighted.
-- **Blast Radius.** Pick an entity, assume it is compromised, and get a one-sentence summary and the resources it could read, change, delete, run, or administer. Each row expands to its path or opens it in the graph. Ways to reduce exposure are measured on an in-memory copy and can be previewed. Analysis settings, what-if grants, controls, and relationships that weren't followed are under Advanced analysis. A comparison view shows every agent against every resource.
-- **Remediation.** Findings ranked by severity, each with what's affected, the evidence path, the recommended action, and a dry-run preview. AgentRadius cannot change provider settings. Make the change where access is granted, then sync. The Activity log shows how many findings each sync resolved.
-- **Activity log and Settings.** What was done this session (in memory only), analysis defaults, data handling, and the controls your sources recorded. There is no policy engine, and nothing is blocked.
+- **Overview.** What AgentRadius does, a "get started" checklist (sign in, add agents, scan, see the map, remediate), and, once there is data, counts and the findings that need attention.
+- **Integrations.** Add agents one by one from a catalog (Atlassian Rovo, Gemini in Google Workspace, Microsoft 365 Copilot, Notion AI, Slack AI, GitHub Copilot, and others) or as a custom agent. Then scan this Mac. Only what you add or scan is listed, with status, access method, last sync, items found, and risk. Added agents are labeled as declared by you and kept in memory only.
+- **Permission Graph.** Opens right after a scan. A strip explains how to read it (agents → servers and tools → credentials → your data). Graph, relationship list, and direct-permission views, with filters, zoom, pan, and keyboard support. Under the graph, each agent's blast radius is summarized, followed by a link to remediate the findings.
+- **Blast Radius.** Pick an entity, assume it is compromised, and get a one-sentence summary and the resources it could read, change, delete, run, or administer. Each row expands to its path or opens it in the graph. Ways to reduce exposure are measured on an in-memory copy and can be previewed. The page ends with a link to Remediation.
+- **Remediation.** Findings ranked by severity, each with what's affected, the evidence path, the recommended action, and a dry-run preview. AgentRadius cannot change provider settings. Make the change where access is granted, then scan again. The Activity log shows how many findings each scan resolved.
+- **Activity log and Settings.** What was done this session (in memory only), sign-in setup, analysis defaults, data handling, and the controls your sources recorded. There is no policy engine, and nothing is blocked.
 
 ## Principles
 
