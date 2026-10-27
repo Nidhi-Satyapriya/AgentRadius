@@ -82,6 +82,9 @@ export function extractServers(
       }
       break;
     }
+    case "codexToml":
+      groups.push({ entries: parsed["mcp_servers"], pointer: "/mcp_servers", scope: "user" });
+      break;
   }
 
   const servers: ServerDeclaration[] = [];
@@ -120,7 +123,7 @@ function normalizeServer(
     : [];
   const args = redactArgs(rawArgs, homeDir);
   const env = namedKeys(raw["env"]);
-  const headers = namedKeys(raw["headers"]);
+  const headers = [...namedKeys(raw["headers"] ?? raw["http_headers"]), ...envHeaderKeys(raw)];
   const dockerEnv = dockerEnvKeys(rawArgs);
   const pkg =
     remote !== undefined
@@ -179,6 +182,23 @@ function namedKeys(value: unknown): NamedKey[] {
     .filter(([key]) => matchSecretPatterns(key).length === 0)
     .map(([key, v]) => classifyValue(key, v))
     .sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
+/**
+ * Codex names headers whose values come from environment variables (`env_http_headers`,
+ * `bearer_token_env_var`). Only the header names are kept.
+ */
+function envHeaderKeys(raw: Json): NamedKey[] {
+  const keys: NamedKey[] = [];
+  const fromEnv = raw["env_http_headers"];
+  if (isObject(fromEnv))
+    for (const key of Object.keys(fromEnv).sort()) {
+      if (matchSecretPatterns(key).length > 0) continue;
+      keys.push({ key, storage: "environment_reference", secretBearing: isSecretBearingKey(key) });
+    }
+  if (typeof raw["bearer_token_env_var"] === "string")
+    keys.push({ key: "Authorization", storage: "environment_reference", secretBearing: true });
+  return keys;
 }
 
 /** `docker run -e KEY=VALUE` and `-e KEY` (pass-through) become env keys. */

@@ -6,7 +6,7 @@ import { useAsyncTask } from "../useAsync.ts";
 import { useWorkspace } from "../workspace.tsx";
 
 export const SCAN_DISCLOSURE =
-  "Reads the MCP config files of Cursor, VS Code, Claude Desktop, Claude Code, and Windsurf. Values are discarded while reading. Nothing is started, changed, saved, or sent.";
+  "Reads the MCP config files of Cursor, VS Code, Claude Desktop, Claude Code, Windsurf, and Codex. Values are discarded while reading. Nothing is started, changed, saved, or sent.";
 
 /** Display-only relative time; analysis never reads the wall clock. */
 export function timeAgo(iso: string): string {

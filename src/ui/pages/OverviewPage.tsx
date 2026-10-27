@@ -15,7 +15,7 @@ const FEATURES: readonly { icon: IconName; title: string; text: string; to: Rout
   {
     icon: "integrations",
     title: "Discover MCP setups",
-    text: "Reads the MCP configs of Cursor, VS Code, Claude Desktop, Claude Code, and Windsurf on macOS, Windows, or Linux, and knows what common servers can do.",
+    text: "Reads the MCP configs of Cursor, VS Code, Claude Desktop, Claude Code, Windsurf, and Codex on macOS, Windows, or Linux, and knows what common servers can do.",
     to: "integrations",
   },
   {

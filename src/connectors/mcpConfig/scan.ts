@@ -3,6 +3,7 @@ import type { ConnectorRun, ConnectorStatus } from "../../domain/index.ts";
 import type { ConnectorResult, ScanContext } from "../contract.ts";
 import { pathExists, readConfigFile, type ConfigReadResult } from "../fileAccess.ts";
 import { parseJsonc } from "../jsonc.ts";
+import { parseToml } from "../toml.ts";
 import { currentPlatform, mcpClientsFor, PLATFORM_LABELS, type McpClient } from "./clients.ts";
 import { extractServers, tildify } from "./parse.ts";
 import { discoverPluginLocations } from "./plugins.ts";
@@ -58,7 +59,7 @@ async function scanClient(client: McpClient, context: ScanContext): Promise<Conn
     }
     try {
       const servers = extractServers(
-        parseJsonc(read.text),
+        location.format === "codexToml" ? parseToml(read.text) : parseJsonc(read.text),
         location.format,
         context.homeDir,
         location.scope,
@@ -135,7 +136,12 @@ function coverageOf(
 function errorOf(outcome: FileOutcome): { code: string; message: string }[] {
   const { read, displayPath } = outcome;
   if (outcome.parseFailed === true)
-    return [{ code: "parse_error", message: `${displayPath} is not valid JSON or JSONC.` }];
+    return [
+      {
+        code: "parse_error",
+        message: `${displayPath} is not valid ${displayPath.endsWith(".toml") ? "TOML" : "JSON or JSONC"}.`,
+      },
+    ];
   switch (read.kind) {
     case "ok":
     case "missing":

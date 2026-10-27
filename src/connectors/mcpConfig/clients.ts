@@ -24,7 +24,9 @@ export type ConfigFormat =
   /** VS Code settings.json: `{ "mcp": { "servers": { … } } }`. Only that key is read. */
   | "vscodeSettings"
   /** ~/.claude.json: top-level `mcpServers` plus `projects[path].mcpServers`. Only those keys are read. */
-  | "claudeCode";
+  | "claudeCode"
+  /** ~/.codex/config.toml: only the `[mcp_servers.<name>]` tables are read. */
+  | "codexToml";
 
 export interface ConfigLocation {
   readonly relativePath: string;
@@ -116,6 +118,12 @@ const SPECS: readonly ClientSpec[] = [
       win32: "AppData/Local/Programs/Windsurf/Windsurf.exe",
     },
     locations: same([mcp(".codeium/windsurf/mcp_config.json")]),
+  },
+  {
+    id: "codex",
+    label: "Codex",
+    cli: true,
+    locations: same([{ relativePath: ".codex/config.toml", format: "codexToml" }]),
   },
 ];
 

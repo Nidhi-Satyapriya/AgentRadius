@@ -255,3 +255,52 @@ describe("Windows and Linux locations", () => {
     );
   });
 });
+
+describe("Codex", () => {
+  it("reads only the mcp_servers tables of config.toml and discards every value", async () => {
+    const leak = SENTINEL.githubToken();
+    const dir = home({
+      ".codex/config.toml": [
+        'model = "gpt-5"',
+        "",
+        "[mcp_servers.github]",
+        'command = "npx"',
+        'args = ["-y", "@modelcontextprotocol/server-github"]',
+        "",
+        "[mcp_servers.github.env]",
+        `GITHUB_PERSONAL_ACCESS_TOKEN = "${leak}"`,
+        "",
+        '[mcp_servers."docs-search"]',
+        'url = "https://mcp.example.invalid/mcp"',
+        'bearer_token_env_var = "DOCS_TOKEN"',
+        "",
+        "[profiles.work]",
+        'model = "other"',
+      ].join("\n"),
+      ".codex/auth.json": `{"token":"${leak}"}`,
+    });
+    const [codex] = await scanMcpClients({ homeDir: dir, now: NOW, platform: "darwin" }, [
+      MCP_CLIENTS.find((c) => c.id === "codex")!,
+    ]);
+    expect(codex!.run.status).toBe("completed");
+    expect(codex!.nodes.filter((n) => n.type === "MCPServer").map((n) => n.id)).toEqual([
+      "mcp:codex.docs-search",
+      "mcp:codex.github",
+    ]);
+    expect(codex!.edges.some((e) => e.to === "res:saas.github")).toBe(true);
+    expect(codex!.run.requiredPrivileges[0]).not.toContain("auth.json");
+    expect(JSON.stringify(codex)).not.toContain(leak);
+  });
+
+  it("reports malformed TOML without quoting it", async () => {
+    const leak = SENTINEL.githubToken();
+    const dir = home({ ".codex/config.toml": `[mcp_servers.x]\ncommand = "${leak}` });
+    const [codex] = await scanMcpClients({ homeDir: dir, now: NOW, platform: "darwin" }, [
+      MCP_CLIENTS.find((c) => c.id === "codex")!,
+    ]);
+    expect(codex!.run.errors).toEqual([
+      { code: "parse_error", message: "~/.codex/config.toml is not valid TOML." },
+    ]);
+    expect(JSON.stringify(codex)).not.toContain(leak);
+  });
+});

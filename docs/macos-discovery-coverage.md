@@ -11,6 +11,7 @@
 | Claude Desktop | `Library/Application Support/Claude/claude_desktop_config.json`                                               |                                                                     |
 | Claude Code    | `.claude.json`: only the `mcpServers` keys (user scope and per-project scope)                                 | Other keys in that file are parsed in memory but never read or kept |
 | Windsurf       | `.codeium/windsurf/mcp_config.json`                                                                           |                                                                     |
+| Codex          | `.codex/config.toml`: only the `[mcp_servers.<name>]` tables (approved by the user 2026-10-27)                | Read with a built-in TOML reader. `.codex/auth.json` is never read  |
 
 Windows and Linux use these locations instead (all relative to the home folder; not yet tested on those systems):
 
@@ -21,6 +22,7 @@ Windows and Linux use these locations instead (all relative to the home folder; 
 | Claude Desktop | `AppData/Roaming/Claude/claude_desktop_config.json`      | not available on Linux; skipped                  |
 | Claude Code    | same as macOS                                            | same as macOS                                    |
 | Windsurf       | same as macOS                                            | same as macOS                                    |
+| Codex          | same as macOS                                            | same as macOS                                    |
 
 - **What servers can do:** for recognized servers, read, write, and run-command access is inferred from a built-in catalog (`known-mcp-capabilities`). Filesystem servers are scoped to the folders listed in their arguments, which are recorded as text and never opened.
 - **Collected:** server names, transport, command and arguments (secret-shaped values, secret flags, URL credentials, and query strings removed), remote host, package source and version pin, environment variable and header **names**, and where each credential value is stored: plain text, secret-manager reference, prompted input, environment, or key file.

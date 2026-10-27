@@ -2,7 +2,7 @@
 
 A local-first security tool for your computer (macOS first; Windows and Linux config locations are supported but not yet field-tested). It shows **what each AI agent can reach** (through which MCP servers, credentials, and cloud roles), **how sure it is**, and **what actually stops it**.
 
-> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this computer** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf) on macOS, Windows, or Linux; values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions (GitHub, AWS, Atlassian, and others) are not collected yet, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
+> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this computer** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf, Codex) on macOS, Windows, or Linux; values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions are collected only for GitHub and Notion, and only when you connect them with a read-only token, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
 
 ## Quick start
 
