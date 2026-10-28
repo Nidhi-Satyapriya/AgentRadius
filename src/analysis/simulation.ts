@@ -32,7 +32,7 @@ export const SIMULATION_NOTICE =
   "Simulated on an in-memory copy of the graph. Nothing was changed on this computer, in any configuration file, or at any provider.";
 
 const SIMULATION_SOURCE = {
-  connectorId: "agentradius.simulation",
+  connectorId: "mcpradius.simulation",
   evidenceRef: "simulation:in-memory",
   collectionMethod: "inference_rule",
 } as const;

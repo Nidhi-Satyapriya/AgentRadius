@@ -48,7 +48,7 @@ export function PathExplanation({ path, onSimulateRemove }: PathExplanationProps
                 {conditional.has(step.edgeId) && (
                   <span
                     className="badge badge-conditional"
-                    title="Depends on a condition AgentRadius could not resolve"
+                    title="Depends on a condition MCPRadius could not resolve"
                   >
                     conditional
                   </span>

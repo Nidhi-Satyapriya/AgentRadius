@@ -1,6 +1,6 @@
-# macOS discovery coverage
+# MCPRadius discovery coverage
 
-**Current state: one live connector, MCP client configs, on macOS, Windows, and Linux** ([ADR 0011](./adr/0011-cross-platform-discovery-and-capability-catalog.md)). The dashboard starts empty. It reads this computer only when you click **Scan this computer**. Every other connector below is a proposal ([ADR 0008](./adr/0008-read-only-macos-discovery.md)) and needs the user's approval before it is built.
+**Current scope:** local MCP configuration on macOS, Windows, and Linux, plus opt-in GitHub and Notion account reads ([ADR 0013](./adr/0013-mcpradius-scope.md)). The dashboard starts empty. Local configuration is read only when you click **Scan this computer**; account data is read only when you paste a supported token. Every other connector below is a proposal and needs approval before it is built.
 
 ## Live: MCP client configuration connector
 

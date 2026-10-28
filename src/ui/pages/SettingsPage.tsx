@@ -44,9 +44,7 @@ export function SettingsPage() {
       <section className="card" aria-labelledby="s-data">
         <h3 id="s-data">Data handling</h3>
         <ul className="plain-list">
-          <li>
-            Read-only. AgentRadius never changes app configs, credentials, or system settings.
-          </li>
+          <li>Read-only. MCPRadius never changes app configs, credentials, or system settings.</li>
           <li>Secret values are never stored or shown. Only where a credential is referenced.</li>
           <li>Everything stays on this computer and in memory. Nothing is uploaded.</li>
           <li>Servers found in configs are never started, and their commands are never run.</li>
@@ -56,8 +54,8 @@ export function SettingsPage() {
       <section className="card" aria-labelledby="s-controls">
         <h3 id="s-controls">Controls</h3>
         <p className="muted">
-          Controls recorded by your sources. AgentRadius doesn&apos;t create or enforce policies,
-          and doesn&apos;t block anything. Only a control verified as enforced reduces blast radius.
+          Controls recorded by your sources. MCPRadius doesn&apos;t create or enforce policies, and
+          doesn&apos;t block anything. Only a control verified as enforced reduces blast radius.
         </p>
         {policies.length === 0 ? (
           <p className="muted">No controls were found in the connected sources.</p>
@@ -89,9 +87,9 @@ function SignInSettings() {
     <section className="card" aria-labelledby="s-signin" id="sign-in">
       <h3 id="s-signin">Sign-in</h3>
       <p className="muted">
-        Optional. Google sign-in only tells AgentRadius who you are (name and email). It requests no
+        Optional. Google sign-in only tells MCPRadius who you are (name and email). It requests no
         access to Gmail, Drive, Calendar, or any other Google data, and no Google token is kept.
-        Your session lasts until you sign out, 12 hours pass, or AgentRadius stops.
+        Your session lasts until you sign out, 12 hours pass, or MCPRadius stops.
       </p>
       {auth?.user ? (
         <p>
@@ -120,17 +118,17 @@ function SignInSettings() {
               </code>
             </li>
             <li>
-              Start AgentRadius with the client ID and secret in its environment:
+              Start MCPRadius with the client ID and secret in its environment:
               <pre className="code-block">
-                {"export AGENTRADIUS_GOOGLE_CLIENT_ID=<your client id>\n" +
-                  "export AGENTRADIUS_GOOGLE_CLIENT_SECRET=<your client secret>\n" +
+                {"export MCPRADIUS_GOOGLE_CLIENT_ID=<your client id>\n" +
+                  "export MCPRADIUS_GOOGLE_CLIENT_SECRET=<your client secret>\n" +
                   "npm start"}
               </pre>
             </li>
           </ol>
           <p className="muted small">
-            Keep the client secret out of files you commit. AgentRadius reads it from the
-            environment only and never shows or logs it.
+            Keep the client secret out of files you commit. MCPRadius reads it from the environment
+            only and never shows or logs it.
           </p>
         </>
       )}

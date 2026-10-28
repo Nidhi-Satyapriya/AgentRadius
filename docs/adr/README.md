@@ -16,3 +16,4 @@ Each record states the context, the decision, and its consequences. A record is 
 | [0010](./0010-optional-google-sign-in.md)                         | Optional Google sign-in, and no sample data in the app                       | Accepted |
 | [0011](./0011-cross-platform-discovery-and-capability-catalog.md) | Windows and Linux config locations, and a catalog of what MCP servers can do | Accepted |
 | [0012](./0012-read-only-account-connections.md)                   | Read-only account connections with a pasted token that is not kept           | Accepted |
+| [0013](./0013-mcpradius-scope.md)                                 | MCPRadius scope: local MCP access plus supported account tokens              | Accepted |

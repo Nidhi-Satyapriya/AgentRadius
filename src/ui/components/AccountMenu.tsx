@@ -2,7 +2,7 @@ import { googleSignInUrl } from "../api.ts";
 import { useAuth } from "../auth.tsx";
 import { href } from "../routing.ts";
 
-/** Sign-in identifies you only. It grants AgentRadius no access to Google data. */
+/** Sign-in identifies you only. It grants MCPRadius no access to Google data. */
 export function SignInButton({ large = false }: { large?: boolean }) {
   const { auth } = useAuth();
   if (auth === null) return null;

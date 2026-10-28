@@ -1,4 +1,4 @@
-/** AgentRadius mark: a point with expanding reach arcs. Decorative; the wordmark carries the name. */
+/** MCPRadius mark: a point with expanding reach arcs. Decorative; the wordmark carries the name. */
 export function RadiusMark({ size = 28 }: { size?: number }) {
   return (
     <svg

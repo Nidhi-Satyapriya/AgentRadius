@@ -1,5 +1,5 @@
 /**
- * Canonical vocabulary for the AgentRadius permission graph.
+ * Canonical vocabulary for the MCPRadius permission graph.
  * Every other module imports these lists; nothing else defines its own copy.
  */
 

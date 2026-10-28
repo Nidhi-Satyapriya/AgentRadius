@@ -28,7 +28,7 @@ export interface AuthResponse {
   readonly configured: boolean;
   /** The address to register with Google as the authorized redirect URI. */
   readonly redirectUri: string;
-  /** Who is signed in. Identity only: AgentRadius gets no access to Google data. */
+  /** Who is signed in. Identity only: MCPRadius gets no access to Google data. */
   readonly user: { readonly name: string; readonly email: string } | null;
 }
 

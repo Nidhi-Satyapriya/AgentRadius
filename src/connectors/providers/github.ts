@@ -40,7 +40,7 @@ export async function readGitHub(
   const headers = {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
-    "User-Agent": "AgentRadius",
+    "User-Agent": "MCPRadius",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   const get = async <T>(path: string, schema: z.ZodType<T>): Promise<T> => {

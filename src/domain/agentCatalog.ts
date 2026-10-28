@@ -11,40 +11,9 @@ export interface CatalogApp {
   readonly providerLabel: string;
 }
 
-const ATLASSIAN = { provider: "atlassian", providerLabel: "Atlassian (Jira / Confluence)" };
-const GOOGLE = {
-  provider: "google-workspace",
-  providerLabel: "Google Workspace (Drive / Gmail / Calendar)",
-};
-const MICROSOFT = { provider: "microsoft-365", providerLabel: "Microsoft 365" };
-const own = (id: string, label: string): CatalogApp => ({
-  id,
-  label,
-  provider: id,
-  providerLabel: label,
-});
-
 export const CATALOG_APPS: readonly CatalogApp[] = [
-  { id: "confluence", label: "Confluence", ...ATLASSIAN },
-  { id: "jira", label: "Jira", ...ATLASSIAN },
-  { id: "gmail", label: "Gmail", ...GOOGLE },
-  { id: "google-calendar", label: "Google Calendar", ...GOOGLE },
-  { id: "google-drive", label: "Google Drive", ...GOOGLE },
-  { id: "outlook", label: "Outlook", ...MICROSOFT },
-  { id: "teams", label: "Microsoft Teams", ...MICROSOFT },
-  { id: "sharepoint", label: "SharePoint and OneDrive", ...MICROSOFT },
-  own("slack", "Slack"),
-  own("notion", "Notion"),
-  own("github", "GitHub"),
-  own("gitlab", "GitLab"),
-  own("linear", "Linear"),
-  own("figma", "Figma"),
-  own("salesforce", "Salesforce"),
-  own("hubspot", "HubSpot"),
-  own("zendesk", "Zendesk"),
-  own("zoom", "Zoom"),
-  own("stripe", "Stripe"),
-  own("aws", "AWS"),
+  { id: "github", label: "GitHub", provider: "github", providerLabel: "GitHub" },
+  { id: "notion", label: "Notion", provider: "notion", providerLabel: "Notion" },
 ];
 
 export const AGENT_RUNTIMES = ["in_app", "own_infrastructure", "device", "unknown"] as const;
@@ -78,34 +47,8 @@ export interface AgentPreset {
 }
 
 export const AGENT_PRESETS: readonly AgentPreset[] = [
-  {
-    id: "atlassian-rovo",
-    label: "Atlassian Rovo",
-    runtime: "in_app",
-    appIds: ["confluence", "jira"],
-  },
-  {
-    id: "gemini-workspace",
-    label: "Gemini in Google Workspace",
-    runtime: "in_app",
-    appIds: ["gmail", "google-calendar", "google-drive"],
-  },
-  {
-    id: "microsoft-copilot",
-    label: "Microsoft 365 Copilot",
-    runtime: "in_app",
-    appIds: ["outlook", "teams", "sharepoint"],
-  },
-  { id: "notion-ai", label: "Notion AI", runtime: "in_app", appIds: ["notion"] },
-  { id: "slack-ai", label: "Slack AI", runtime: "in_app", appIds: ["slack"] },
   { id: "github-copilot", label: "GitHub Copilot", runtime: "in_app", appIds: ["github"] },
-  {
-    id: "salesforce-agentforce",
-    label: "Salesforce Agentforce",
-    runtime: "in_app",
-    appIds: ["salesforce"],
-  },
-  { id: "zoom-ai-companion", label: "Zoom AI Companion", runtime: "in_app", appIds: ["zoom"] },
+  { id: "notion-ai", label: "Notion AI", runtime: "in_app", appIds: ["notion"] },
 ];
 
 /** A user-declared agent as held in the session. `id` is derived from the name. */

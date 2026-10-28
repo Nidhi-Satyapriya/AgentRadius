@@ -23,8 +23,8 @@ const STATE_EXPLANATION: Record<EnforcementState, string> = {
   monitor_only: "Observes and records activity but does not block anything.",
   advisory: "A recommendation only; nothing intercepts the traffic.",
   external_declared:
-    "Declared by an external system (e.g. a provider setting); AgentRadius has not verified it.",
-  not_enforceable: "AgentRadius cannot mediate this path, so the control cannot be applied here.",
+    "Declared by an external system (e.g. a provider setting); MCPRadius has not verified it.",
+  not_enforceable: "MCPRadius cannot mediate this path, so the control cannot be applied here.",
 };
 
 export function controlsGoverning(graph: GraphIndex, nodeId: string): ControlRef[] {

@@ -20,8 +20,8 @@ const FEATURES: readonly { icon: IconName; title: string; text: string; to: Rout
   },
   {
     icon: "pulse",
-    title: "Add in-app agents",
-    text: "Rovo, Copilot, Gemini, Slack AI and others live inside apps. Add them one by one.",
+    title: "Configure supported accounts",
+    text: "Connect GitHub or Notion with a read-only token, then track their in-app agents.",
     to: "integrations",
   },
   {
@@ -73,13 +73,13 @@ export function OverviewPage({ signInFailed = false }: { signInFailed?: boolean 
             See everything your AI agents <span className="accent-text">can reach.</span>
           </h2>
           <p className="hero-lede">
-            AgentRadius maps your agents, MCP servers, credentials, and app access into one
-            permission graph. Then it shows what a compromise could affect and which access to
+            MCPRadius maps your agents, MCP servers, credentials, and supported account access into
+            one permission graph. Then it shows what a compromise could affect and which access to
             remove first.
           </p>
           <div className="hero-actions">
             <a className="btn-primary btn-lg" href={href("integrations")}>
-              Integrate your AgentRadius setup <span aria-hidden="true">→</span>
+              Configure MCPRadius <span aria-hidden="true">→</span>
             </a>
             {!signedIn && <SignInButton large />}
           </div>
@@ -94,7 +94,7 @@ export function OverviewPage({ signInFailed = false }: { signInFailed?: boolean 
 
       <section aria-labelledby="features-title">
         <h3 id="features-title" className="section-title">
-          What AgentRadius does
+          What MCPRadius does
         </h3>
         <ul className="feature-grid">
           {FEATURES.map((f) => (
@@ -119,19 +119,24 @@ export function OverviewPage({ signInFailed = false }: { signInFailed?: boolean 
         <ol className="journey">
           <Step
             n={1}
-            done={signedIn}
-            title="Sign in"
+            done={data.connections.length > 0}
+            title="Connect a supported account"
             text={
-              signedIn
-                ? `Signed in as ${auth!.user!.name}`
-                : "Optional. Google identifies you; no access to your Google data."
+              data.connections.length > 0
+                ? `${plural(data.connections.length, "account")} read`
+                : "GitHub or Notion"
             }
+            to="integrations"
           />
           <Step
             n={2}
             done={agentsAdded > 0}
-            title="Add your agents"
-            text={agentsAdded > 0 ? `${plural(agentsAdded, "agent")} added` : "Pick from the list"}
+            title="Track an in-app agent"
+            text={
+              agentsAdded > 0
+                ? `${plural(agentsAdded, "agent")} tracked`
+                : "GitHub Copilot or Notion AI"
+            }
             to="integrations"
           />
           <Step

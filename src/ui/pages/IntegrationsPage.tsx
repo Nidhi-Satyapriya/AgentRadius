@@ -1,15 +1,15 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ACCESS_LABELS,
   AGENT_PRESETS,
   catalogApp,
   DECLARED_CONNECTOR_ID,
   RUNTIME_LABELS,
+  type AgentPreset,
 } from "../../domain/core.ts";
 import { api } from "../api.ts";
 import { SeverityBadge } from "../components/Badges.tsx";
 import { ConnectAccounts, ConnectPrompt } from "../components/ConnectAccounts.tsx";
-import { DeclareAgentForm } from "../components/DeclareAgentForm.tsx";
 import {
   SCAN_DISCLOSURE,
   ScanButton,
@@ -30,15 +30,11 @@ import { plural } from "../labels.ts";
 import { href } from "../routing.ts";
 import { useWorkspace } from "../workspace.tsx";
 
-const CUSTOM = "custom";
-
 export function IntegrationsPage({ selectedId }: { selectedId: string | null }) {
   const ws = useWorkspace();
   const rows = useMemo(() => integrationRows(ws), [ws]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category | "all">("all");
-  const [adding, setAdding] = useState<string | null>(null);
-  const closeForm = useCallback(() => setAdding(null), []);
   const present = CATEGORIES.filter((c) => rows.some((r) => r.category === c));
   const q = query.trim().toLowerCase();
   const visible = rows.filter(
@@ -55,115 +51,77 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
   return (
     <div className="page">
       <header className="page-header">
-        <h2>Integrate your setup</h2>
+        <h2>Configure your access</h2>
         <p className="muted">
-          Add the AI agents you use and scan this computer. Connect an account to replace
-          assumptions with what you can really reach. Nothing here changes anything.
+          Connect GitHub or Notion with a read-only token, add its in-app agent, and scan your MCP
+          setup. Nothing here changes anything.
         </p>
       </header>
 
       <ol className="setup-steps" aria-label="Setup steps">
-        <li className={agentsAdded > 0 ? "is-done" : "is-current"}>
+        <li className={ws.data.connections.length > 0 ? "is-done" : "is-current"}>
           <span className="step-num" aria-hidden="true">
             1
           </span>
           <div>
-            <strong>Add your agents</strong>
+            <strong>Connect an account</strong>
             <span className="muted">
-              {agentsAdded > 0 ? `${plural(agentsAdded, "agent")} added` : "Pick from the list"}
+              {ws.data.connections.length > 0
+                ? `${plural(ws.data.connections.length, "account")} read`
+                : "GitHub or Notion"}
+            </span>
+          </div>
+        </li>
+        <li
+          className={
+            agentsAdded > 0 ? "is-done" : ws.data.connections.length > 0 ? "is-current" : ""
+          }
+        >
+          <span className="step-num" aria-hidden="true">
+            2
+          </span>
+          <div>
+            <strong>Track an in-app agent</strong>
+            <span className="muted">
+              {agentsAdded > 0
+                ? `${plural(agentsAdded, "agent")} tracked`
+                : "GitHub Copilot or Notion AI"}
             </span>
           </div>
         </li>
         <li className={scanned ? "is-done" : agentsAdded > 0 ? "is-current" : ""}>
           <span className="step-num" aria-hidden="true">
-            2
-          </span>
-          <div>
-            <strong>Scan this computer</strong>
-            <span className="muted">
-              {scanned ? `Scanned ${timeAgo(ws.data.scannedAt!)}` : "Finds MCP servers"}
-            </span>
-          </div>
-        </li>
-        <li className={scanned ? "is-current" : ""}>
-          <span className="step-num" aria-hidden="true">
             3
           </span>
           <div>
-            <strong>See your map</strong>
+            <strong>Scan MCP setup</strong>
             <span className="muted">
-              {scanned || agentsAdded > 0 ? (
-                <a href={href("graph")}>Open the Permission Graph</a>
-              ) : (
-                "Opens after the scan"
-              )}
+              {scanned ? `Scanned ${timeAgo(ws.data.scannedAt!)}` : "Finds local MCP servers"}
             </span>
           </div>
         </li>
       </ol>
 
+      <ConnectAccounts />
+
       <div className="integrate-grid">
         <section className="card" aria-labelledby="catalog-title">
           <div className="card-head">
-            <h3 id="catalog-title">Add agents one by one</h3>
+            <h3 id="catalog-title">Track supported in-app agents</h3>
           </div>
           <p className="muted">
-            For assistants that live inside apps, which a scan of this computer can&apos;t see.
-            Choose one, confirm what it can reach, and add it.
+            These agents act as you. Connect the matching account above to replace the assumption
+            with its actual repositories or pages.
           </p>
-          {ws.replace && adding !== null ? (
-            <DeclareAgentForm
-              key={adding}
-              onClose={closeForm}
-              {...(adding !== CUSTOM ? { initialPresetId: adding } : {})}
-            />
-          ) : (
-            <ul className="agent-catalog">
-              {AGENT_PRESETS.map((p) => {
-                const added = addedNames.has(p.label);
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className={`agent-tile ${added ? "is-added" : ""}`}
-                      onClick={() => setAdding(p.id)}
-                      disabled={!ws.replace}
-                      aria-label={added ? `${p.label} (added)` : `Add ${p.label}`}
-                    >
-                      <span className="app-icon" aria-hidden="true">
-                        {monogram(p.label)}
-                      </span>
-                      <span className="agent-tile-text">
-                        <strong>{p.label}</strong>
-                        <span className="muted">
-                          {p.appIds.map((id) => catalogApp(id)?.label ?? id).join(", ")}
-                        </span>
-                      </span>
-                      <span className="agent-tile-action" aria-hidden="true">
-                        {added ? "✓ Added" : "+ Add"}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-              <li>
-                <button
-                  type="button"
-                  className="agent-tile is-custom"
-                  onClick={() => setAdding(CUSTOM)}
-                  disabled={!ws.replace}
-                >
-                  <span className="app-icon" aria-hidden="true">
-                    +
-                  </span>
-                  <span className="agent-tile-text">
-                    <strong>Custom agent</strong>
-                    <span className="muted">Name it and choose its apps</span>
-                  </span>
-                </button>
-              </li>
-            </ul>
-          )}
+          <ul className="agent-catalog">
+            {AGENT_PRESETS.map((preset) => (
+              <TrackAgentButton
+                key={preset.id}
+                preset={preset}
+                added={addedNames.has(preset.label)}
+              />
+            ))}
+          </ul>
         </section>
 
         <section className="card scan-card" aria-labelledby="scan-title">
@@ -186,13 +144,11 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
         </section>
       </div>
 
-      <ConnectAccounts />
-
       <h3 className="section-title">Your integrations</h3>
       {rows.length === 0 ? (
         <div className="card">
           <Empty>
-            Nothing added yet. Add an agent or scan this computer. AgentRadius shows no sample data.
+            Nothing configured yet. Connect an account, track an agent, or scan this computer.
           </Empty>
         </div>
       ) : (
@@ -277,6 +233,46 @@ export function IntegrationsPage({ selectedId }: { selectedId: string | null }) 
         </>
       )}
     </div>
+  );
+}
+
+function TrackAgentButton({ preset, added }: { preset: AgentPreset; added: boolean }) {
+  const add = useWorkspaceChange(api.declareAgent);
+  return (
+    <li>
+      <button
+        type="button"
+        className={`agent-tile ${added ? "is-added" : ""}`}
+        onClick={() =>
+          add.run({
+            name: preset.label,
+            runtime: preset.runtime,
+            appIds: preset.appIds,
+            access: "as_you",
+          })
+        }
+        disabled={added || add.busy || !add.available}
+        aria-label={added ? `${preset.label} (tracked)` : `Track ${preset.label}`}
+      >
+        <span className="app-icon" aria-hidden="true">
+          {monogram(preset.label)}
+        </span>
+        <span className="agent-tile-text">
+          <strong>{preset.label}</strong>
+          <span className="muted">
+            {preset.appIds.map((id) => catalogApp(id)?.label ?? id).join(", ")}
+          </span>
+        </span>
+        <span className="agent-tile-action" aria-hidden="true">
+          {added ? "✓ Tracked" : add.busy ? "Adding…" : "+ Track"}
+        </span>
+      </button>
+      {add.error !== null && (
+        <p className="inline-error" role="alert">
+          {add.error}
+        </p>
+      )}
+    </li>
   );
 }
 
@@ -404,7 +400,7 @@ function DeclaredDetails({ row }: { row: Extract<IntegrationRow, { kind: "declar
         <div className="confirm" role="alertdialog" aria-label={`Remove ${agent.name}?`}>
           <p>
             Remove <strong>{agent.name}</strong>? It disappears from the graph and its findings
-            close. Nothing outside AgentRadius changes.
+            close. Nothing outside MCPRadius changes.
           </p>
           <div className="panel-actions">
             <button

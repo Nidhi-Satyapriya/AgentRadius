@@ -18,11 +18,11 @@ export function ConnectAccounts() {
   return (
     <section className="card connect-card" id={CONNECT_ANCHOR} aria-labelledby="connect-title">
       <div className="card-head">
-        <h3 id="connect-title">Connect accounts (read-only)</h3>
+        <h3 id="connect-title">Supported accounts</h3>
       </div>
       <p className="muted">
-        Swap &ldquo;everything you can access&rdquo; for the real list. You create a read-only
-        token, AgentRadius reads once, and the token is dropped. It is never saved or shown.
+        Configure GitHub or Notion with a read-only token. MCPRadius reads once and drops the token;
+        it is never saved or shown.
       </p>
       <ul className="connect-list">
         {PROVIDERS.map((p) => {
@@ -81,6 +81,7 @@ function ConnectForm({ provider, onDone }: { provider: ProviderInfo; onDone: () 
     connect.run({ provider: provider.id, token: value });
   };
   const error = problem ?? connect.error;
+  const errorId = `${ids}-error`;
 
   return (
     <form className="connect-form" onSubmit={onSubmit} aria-label={`Connect ${provider.label}`}>
@@ -102,11 +103,12 @@ function ConnectForm({ provider, onDone }: { provider: ProviderInfo; onDone: () 
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder={provider.tokenHint}
+          aria-describedby={error !== null ? errorId : undefined}
           required
         />
       </label>
       {error !== null && (
-        <p className="inline-error" role="alert">
+        <p id={errorId} className="inline-error" role="alert">
           {error}
         </p>
       )}

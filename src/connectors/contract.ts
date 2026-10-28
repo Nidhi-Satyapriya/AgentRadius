@@ -15,6 +15,6 @@ export interface ConnectorResult {
 export interface ScanContext {
   readonly homeDir: string;
   readonly now: Date;
-  /** Which operating system's file locations to read. Defaults to the one AgentRadius runs on. */
+  /** Which operating system's file locations to read. Defaults to the one MCPRadius runs on. */
   readonly platform?: Platform;
 }

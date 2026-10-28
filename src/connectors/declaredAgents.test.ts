@@ -6,10 +6,10 @@ import { declaredAgentsToGraph } from "./declaredAgents.ts";
 import { KNOWN_SERVICES } from "./mcpConfig/knownServices.ts";
 
 const AGENT = {
-  id: "agent:declared.slack-ai",
-  name: "Slack AI",
+  id: "agent:declared.github-copilot",
+  name: "GitHub Copilot",
   runtime: "in_app",
-  appIds: ["slack", "gmail"],
+  appIds: ["github", "notion"],
   access: "as_you",
   declaredAt: "2026-10-23T10:00:00.000Z",
 } as const;
@@ -26,10 +26,10 @@ describe("declared agents", () => {
     const { nodes, edges, run } = declaredAgentsToGraph([AGENT]);
     expect(run.readOnly).toBe(true);
     expect(edges.map((e) => [e.type, e.to, e.assertion, e.inferenceRule])).toEqual([
-      ["CAN_READ", "res:app.gmail", "inferred", "in-app-ai-acts-as-user"],
-      ["CAN_READ", "res:app.slack", "inferred", "in-app-ai-acts-as-user"],
-      ["CAN_WRITE", "res:app.gmail", "inferred", "in-app-ai-acts-as-user"],
-      ["CAN_WRITE", "res:app.slack", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_READ", "res:app.github", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_READ", "res:app.notion", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_WRITE", "res:app.github", "inferred", "in-app-ai-acts-as-user"],
+      ["CAN_WRITE", "res:app.notion", "inferred", "in-app-ai-acts-as-user"],
     ]);
     const limited = declaredAgentsToGraph([{ ...AGENT, access: "read" }]).edges;
     expect(limited.map((e) => [e.type, e.assertion])).toEqual([

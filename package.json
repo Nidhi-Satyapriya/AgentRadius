@@ -1,8 +1,8 @@
 {
-  "name": "agentradius",
+  "name": "mcpradius",
   "version": "0.1.0",
   "private": true,
-  "description": "Local-first permission intelligence, blast-radius analysis, and MCP policy control for macOS.",
+  "description": "Local-first MCP permission intelligence and blast-radius analysis.",
   "type": "module",
   "engines": {
     "node": ">=24"

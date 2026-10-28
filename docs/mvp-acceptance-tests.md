@@ -41,13 +41,13 @@ The criteria come from the starter list (`docs/archive/starter/docs/mvp-acceptan
 
 ## User-declared agents
 
-| Criterion                                                                                       | Status | Tests                                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Users can add agents that discovery cannot see (for example, assistants built into SaaS apps)   | ✅     | `src/ui/App.test.tsx` › adds an undetectable agent from a preset; `src/api/server.test.ts` › adds an agent the user describes and analyzes it like any other |
-| Declared relationships are labeled `declared`, medium confidence, with `user_import` provenance | ✅     | `src/connectors/declaredAgents.test.ts` › records only declared, unverified relationships with user provenance                                               |
-| Declared agents merge with discovered data without conflicts                                    | ✅     | `declaredAgents.test.ts` › shares provider boundaries with MCP service matching…; › merges into an existing snapshot without validation errors or conflicts  |
-| Input is validated, same-origin only, and secret-shaped names are rejected without echo         | ✅     | `server.test.ts` › rejects duplicates, unknown apps, unsafe names, and secret-shaped names; › requires same-origin requests and removes agents on request    |
-| Declarations persist across restarts                                                            | ◻      | In memory only, by decision. Lost when AgentRadius stops.                                                                                                    |
+| Criterion                                                                                       | Status | Tests                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Users can track GitHub Copilot or Notion AI, the supported in-app agents discovery cannot see   | ✅     | `src/ui/App.test.tsx` › tracks a supported in-app agent; `src/api/server.test.ts` › adds an agent the user describes and analyzes it like any other         |
+| Declared relationships are labeled `declared`, medium confidence, with `user_import` provenance | ✅     | `src/connectors/declaredAgents.test.ts` › records only declared, unverified relationships with user provenance                                              |
+| Declared agents merge with discovered data without conflicts                                    | ✅     | `declaredAgents.test.ts` › shares provider boundaries with MCP service matching…; › merges into an existing snapshot without validation errors or conflicts |
+| Input is validated, same-origin only, and secret-shaped names are rejected without echo         | ✅     | `server.test.ts` › rejects duplicates, unknown apps, unsafe names, and secret-shaped names; › requires same-origin requests and removes agents on request   |
+| Declarations persist across restarts                                                            | ◻      | In memory only, by decision. Lost when MCPRadius stops.                                                                                                     |
 
 ## Account connections (GitHub, Notion)
 

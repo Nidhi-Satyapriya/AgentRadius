@@ -277,7 +277,7 @@ export const unknownOsPermission: FindingRule = {
   id: "unknown-os-privacy-permission",
   version: "1.0.0",
   description:
-    "AgentRadius could not determine whether an application holds a macOS privacy permission.",
+    "MCPRadius could not determine whether an application holds a macOS privacy permission.",
   evaluate(context) {
     const findings: Finding[] = [];
     for (const edge of context.graph.edges.values()) {
@@ -292,7 +292,7 @@ export const unknownOsPermission: FindingRule = {
           affectedEntityIds: [edge.from, edge.to],
           pathEdgeIds: [edge.id],
           rationale:
-            "macOS does not expose this permission to AgentRadius without additional authorization. Unknown is not the same as denied.",
+            "macOS does not expose this permission to MCPRadius without additional authorization. Unknown is not the same as denied.",
           remediation: [
             "Check System Settings → Privacy & Security, or provide an explicitly authorized report.",
           ],
@@ -323,7 +323,7 @@ export const plaintextCredentialInConfig: FindingRule = {
           affectedEntityIds: [credId, ...users.map((e) => e.from)],
           pathEdgeIds: users.map((e) => e.id).sort(),
           rationale:
-            "Any process running as your user, any backup, and any tool that syncs or shares this file can read the credential. AgentRadius detected this from the configuration's structure and did not record the value.",
+            "Any process running as your user, any backup, and any tool that syncs or shares this file can read the credential. MCPRadius detected this from the configuration's structure and did not record the value.",
           remediation: [
             "Rotate the credential, since it may already have been copied.",
             "Move it to a secret manager reference (for example op://…) or the client's prompted input (for example ${input:…} in VS Code).",

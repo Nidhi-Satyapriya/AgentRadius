@@ -15,6 +15,6 @@ const server = createApiServer(createLocalWorkspaceSession(homedir()), {
 
 server.listen(API_PORT, API_HOST, () => {
   console.warn(
-    `AgentRadius (read-only) listening on http://${API_HOST}:${API_PORT}. Nothing is shown until you add an agent or scan this computer.`,
+    `MCPRadius (read-only) listening on http://${API_HOST}:${API_PORT}. Nothing is shown until you configure an account, track an agent, or scan this computer.`,
   );
 });

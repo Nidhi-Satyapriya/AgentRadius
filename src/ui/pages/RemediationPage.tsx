@@ -62,7 +62,7 @@ export function RemediationPage({ focusId }: { focusId: string | null }) {
         </p>
       </header>
       <p className="note">
-        AgentRadius can&apos;t change app or provider settings. Make the change where the access is
+        MCPRadius can&apos;t change app or provider settings. Make the change where the access is
         granted, then scan again to confirm it&apos;s gone.
       </p>
 

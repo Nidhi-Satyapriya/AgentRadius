@@ -13,7 +13,7 @@ export interface Mitigation {
   /** Measured by re-running the analysis with the change applied to an in-memory copy. */
   readonly impactsRemoved: number;
   readonly impactsRemaining: number;
-  /** Mitigations are suggestions. AgentRadius never applies them automatically. */
+  /** Mitigations are suggestions. MCPRadius never applies them automatically. */
   readonly requiresHumanAction: true;
 }
 

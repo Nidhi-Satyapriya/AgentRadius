@@ -255,7 +255,7 @@ function BlastRadiusResult({
         <p className="summary-sentence">
           {impacts.length === 0 ? (
             <>
-              With what AgentRadius can see, <strong>{name}</strong> reaches none of your data.
+              With what MCPRadius can see, <strong>{name}</strong> reaches none of your data.
             </>
           ) : (
             <>
@@ -296,7 +296,7 @@ function BlastRadiusResult({
               </li>
             )}
             <li>
-              AgentRadius sees what is configured on this computer, not what each server or account
+              MCPRadius sees what is configured on this computer, not what each server or account
               allows. Servers it doesn&apos;t recognize show no reach.
             </li>
             {result.uncertainty.excludedEdges.length > 0 && (

@@ -54,7 +54,7 @@ export function GraphPage(props: {
           <p className="muted">
             {props.justScanned
               ? "The scan found no MCP servers in the supported clients on this computer. Add the agents you use in other apps to map them."
-              : "Add the AI agents you use, or scan this computer. AgentRadius shows no sample data."}
+              : "Connect a supported account, track an in-app agent, or scan this computer."}
           </p>
           <div className="scan-actions">
             <a className="btn-secondary" href={href("integrations")}>

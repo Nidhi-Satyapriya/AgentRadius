@@ -9,7 +9,7 @@ import {
 } from "../domain/index.ts";
 import type { ConnectorResult } from "./contract.ts";
 
-const EVIDENCE = "Entered in AgentRadius by you";
+const EVIDENCE = "Entered in MCPRadius by you";
 
 const ACCESS_EDGES: Readonly<Record<DeclaredAgent["access"], readonly EdgeType[]>> = {
   as_you: ["CAN_READ", "CAN_WRITE"],

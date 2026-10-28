@@ -1,8 +1,8 @@
-# AgentRadius
+# MCPRadius
 
-A local-first security tool for your computer (macOS first; Windows and Linux config locations are supported but not yet field-tested). It shows **what each AI agent can reach** (through which MCP servers, credentials, and cloud roles), **how sure it is**, and **what actually stops it**.
+A local-first MCP permission tool. It shows what configured MCP clients and supported in-app agents can read, change, or run from this computer.
 
-> **Current state: read-only.** The dashboard starts empty and never shows sample data. Add the agents you use, then click **Scan this computer** to read your MCP client configs (Cursor, VS Code, Claude Desktop, Claude Code, Windsurf, Codex) on macOS, Windows, or Linux; values of environment variables and headers are discarded while reading, and the result stays in memory. Account permissions are collected only for GitHub and Notion, and only when you connect them with a read-only token, and AgentRadius does not monitor or block any traffic. See [discovery coverage](docs/macos-discovery-coverage.md) and the [roadmap](docs/implementation-roadmap.md).
+> **Scope:** MCPRadius reads local MCP configuration and, only when you opt in, GitHub or Notion account access with a one-time read-only token. It does not monitor, block, or change anything. See [ADR 0013](docs/adr/0013-mcpradius-scope.md).
 
 ## Quick start
 
@@ -25,11 +25,11 @@ Sign-in only identifies you (name and email). It requests no access to Gmail, Dr
 
 1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an **OAuth client ID** of type **Web application**.
 2. Add the authorized redirect URI `http://127.0.0.1:4317/api/v1/auth/google/callback`.
-3. Start AgentRadius with the client ID and secret in its environment. Don't commit them.
+3. Start MCPRadius with the client ID and secret in its environment. Don't commit them.
 
    ```sh
-   export AGENTRADIUS_GOOGLE_CLIENT_ID="<client id>"
-   export AGENTRADIUS_GOOGLE_CLIENT_SECRET="<client secret>"
+   export MCPRADIUS_GOOGLE_CLIENT_ID="<client id>"
+   export MCPRADIUS_GOOGLE_CLIENT_SECRET="<client secret>"
    npm run dev   # or: npm run build && npm start
    ```
 
@@ -45,11 +45,11 @@ npm run check
 
 The top bar has five areas: Overview, Integrations, Permission Graph, Blast Radius, and Remediation. Settings, the scan status, and sign-in sit on the right.
 
-- **Overview.** What AgentRadius does, a "get started" checklist (sign in, add agents, scan, see the map, remediate), and, once there is data, counts and the findings that need attention.
-- **Integrations.** Add agents one by one from a catalog (Atlassian Rovo, Gemini in Google Workspace, Microsoft 365 Copilot, Notion AI, Slack AI, GitHub Copilot, and others) or as a custom agent. Then scan this computer (macOS, Windows, or Linux). Only what you add, scan, or connect is listed, with status, access method, last sync, items found, and risk. By default an added agent is assumed to reach whatever you can in its apps, because in-app assistants act as you. You can narrow that to read only. To swap that assumption for the real list, connect GitHub or Notion with a read-only token you create (a fine-grained GitHub token with only Metadata access, or a Notion integration with only "Read content"). AgentRadius reads once and drops the token; it is never saved or shown ([ADR 0012](docs/adr/0012-read-only-account-connections.md)). Recognized MCP servers (GitHub, Slack, filesystem, shell, and others) show what they can typically read, change, or run, labeled as inferred.
+- **Overview.** Scope, setup checklist, and results.
+- **Integrations.** Configure GitHub or Notion with a one-time read-only token; track GitHub Copilot or Notion AI; scan local MCP configuration. Account tokens are used for one read, then dropped ([ADR 0012](docs/adr/0012-read-only-account-connections.md)). Only GitHub and Notion appear as account integrations until another provider has a verified reader.
 - **Permission Graph.** Opens right after a scan. A strip explains how to read it (agents → servers and tools → credentials → your data). Graph, relationship list, and direct-permission views, with filters, zoom, pan, and keyboard support. Under the graph, each agent's blast radius is summarized, followed by a link to remediate the findings.
 - **Blast Radius.** Riskiest agents are ranked first. Pick one and see its reach in three boxes: can delete, run, or administer; can change; can read. Each resource shows a short chain of how it is reached, with details and graph links. Fix-first cards preview how much each change shrinks reach. When nothing is reachable, the page says why. Analysis settings and what-if grants are under Advanced.
-- **Remediation.** Findings ranked by severity, each with what's affected, the evidence path, the recommended action, and a dry-run preview. AgentRadius cannot change provider settings. Make the change where access is granted, then scan again.
+- **Remediation.** Findings ranked by severity, evidence path, recommended change, and dry-run preview. MCPRadius cannot change provider settings.
 - **Settings.** Sign-in setup, analysis defaults, data handling, and the controls your sources recorded. There is no policy engine, and nothing is blocked.
 
 ## Principles
@@ -57,7 +57,7 @@ The top bar has five areas: Overview, Integrations, Permission Graph, Blast Radi
 - **Evidence first.** Every fact has provenance. Unknown is not treated as denied, and inferred is not treated as observed.
 - **Reachability is not exploitability.** Results state their assumption and say what they do not prove.
 - **Only verified enforcement counts.** Monitor-only, advisory, and externally declared controls are shown, but they never shrink blast radius.
-- **No secrets, ever.** Data containing secret-shaped values is rejected at ingestion. AgentRadius records names and references, never values.
+- **No secrets, ever.** Data containing secret-shaped values is rejected at ingestion. MCPRadius records names and references, never values.
 - **Local only.** It binds to `127.0.0.1`, hardened against DNS rebinding and CSRF. There is no telemetry and nothing is uploaded.
 
 ## Documentation

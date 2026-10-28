@@ -31,7 +31,7 @@ const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_PENDING = 20;
 const MAX_SESSIONS = 50;
 const REQUEST_TIMEOUT_MS = 10_000;
-export const SESSION_COOKIE = "agentradius_session";
+export const SESSION_COOKIE = "mcpradius_session";
 export const SESSION_MAX_AGE_S = SESSION_TTL_MS / 1000;
 
 const TokenResponseSchema = z.object({ access_token: z.string().min(1).max(4096) });
@@ -46,8 +46,11 @@ export function googleAuthConfigFromEnv(
   env: NodeJS.ProcessEnv,
   port: number,
 ): GoogleAuthConfig | null {
-  const clientId = env["AGENTRADIUS_GOOGLE_CLIENT_ID"]?.trim();
-  const clientSecret = env["AGENTRADIUS_GOOGLE_CLIENT_SECRET"]?.trim();
+  const clientId =
+    env["MCPRADIUS_GOOGLE_CLIENT_ID"]?.trim() ?? env["AGENTRADIUS_GOOGLE_CLIENT_ID"]?.trim();
+  const clientSecret =
+    env["MCPRADIUS_GOOGLE_CLIENT_SECRET"]?.trim() ??
+    env["AGENTRADIUS_GOOGLE_CLIENT_SECRET"]?.trim();
   if (!clientId || !clientSecret) return null;
   return {
     clientId,

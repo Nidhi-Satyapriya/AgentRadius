@@ -59,7 +59,7 @@ export function createApiServer(session: WorkspaceSession, options: ApiServerOpt
       if (error instanceof HttpError) return sendError(res, error);
       // Never leak internals: log a generic marker server-side, return a generic error.
       console.error(
-        "agentradius: unhandled request error",
+        "mcpradius: unhandled request error",
         error instanceof Error ? error.name : "unknown",
       );
       sendError(res, new HttpError(500, "internal_error", "Internal error"));
@@ -299,7 +299,7 @@ const PROVIDER_ERRORS: Readonly<Record<ProviderErrorCode, [number, string]>> = {
   provider_unreachable: [502, "Couldn't reach the provider. Check your connection and try again."],
   unexpected_response: [
     502,
-    "The provider sent a response AgentRadius doesn't understand, so nothing was added.",
+    "The provider sent a response MCPRadius doesn't understand, so nothing was added.",
   ],
 };
 

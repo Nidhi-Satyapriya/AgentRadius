@@ -102,7 +102,7 @@ describe("dashboard shell", () => {
 });
 
 describe("integrations page", () => {
-  it("adds an undetectable agent from a preset", async () => {
+  it("tracks a supported in-app agent", async () => {
     const session = createWorkspaceSession(async () => ({}));
     vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
       if (url.endsWith("/auth")) return { ok: true, status: 200, json: async () => SIGN_IN_OFF };
@@ -121,10 +121,7 @@ describe("integrations page", () => {
         onWorkspaceChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add Notion AI" }));
-    const form = screen.getByRole("form", { name: "Add Notion AI" });
-    expect(within(form).getByLabelText("Notion")).toHaveProperty("checked", true);
-    fireEvent.click(within(form).getByRole("button", { name: "Add agent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Track Notion AI" }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     const next = onChange.mock.calls[0]![0] as typeof data;
     expect(next.declaredAgents.map((a) => a.name)).toEqual(["Notion AI"]);
@@ -170,7 +167,7 @@ describe("integrations page", () => {
         onWorkspaceChange={onChange}
       />,
     );
-    const card = screen.getByRole("region", { name: "Connect accounts (read-only)" });
+    const card = screen.getByRole("region", { name: "Supported accounts" });
     expect(within(card).queryByText(/Read \d/)).toBeNull();
     fireEvent.click(within(card).getAllByRole("button", { name: "Connect" })[0]!);
     const form = screen.getByRole("form", { name: "Connect GitHub" });
@@ -343,11 +340,11 @@ describe("starting empty", () => {
       />,
     );
 
-  it("introduces AgentRadius and points to setup without showing any sample data", () => {
+  it("introduces MCPRadius and points to setup without showing any sample data", () => {
     at("overview");
     expect(screen.queryByText("DEMO FIXTURE")).toBeNull();
     expect(screen.getByRole("heading", { name: /See everything your AI agents/ })).toBeTruthy();
-    const cta = screen.getByRole("link", { name: /Integrate your AgentRadius setup/ });
+    const cta = screen.getByRole("link", { name: /Configure MCPRadius/ });
     expect(cta.getAttribute("href")).toBe(href("integrations"));
     expect(screen.queryByText("Your workspace")).toBeNull();
     expect(screen.getByText("Not scanned yet")).toBeTruthy();
@@ -355,7 +352,7 @@ describe("starting empty", () => {
 
   it("shows empty integrations and an empty map with next steps", () => {
     const { unmount } = at("integrations");
-    expect(screen.getByText(/Nothing added yet/)).toBeTruthy();
+    expect(screen.getByText(/Nothing configured yet/)).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
     unmount();
     at("graph");
@@ -379,7 +376,7 @@ describe("starting empty", () => {
   it("offers optional Google sign-in and explains setup when it isn't configured", async () => {
     at("settings");
     expect((await screen.findAllByRole("link", { name: /Sign in with Google/ })).length).toBe(1);
-    expect(screen.getByText(/AGENTRADIUS_GOOGLE_CLIENT_ID/)).toBeTruthy();
+    expect(screen.getByText(/MCPRADIUS_GOOGLE_CLIENT_ID/)).toBeTruthy();
     expect(screen.getByText(SIGN_IN_OFF.redirectUri)).toBeTruthy();
     expect(screen.getByText(/requests no\s+access to Gmail/)).toBeTruthy();
   });

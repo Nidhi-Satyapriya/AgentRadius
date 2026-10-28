@@ -273,7 +273,7 @@ const nodes: GraphNode[] = [
 
   node("policy:gh-branch-protection", "Policy", "GitHub branch protection on infra/main", GITHUB, {
     boundary: "tb:github",
-    description: "Reported by GitHub. Not verified or enforced by AgentRadius.",
+    description: "Reported by GitHub. Not verified or enforced by MCPRadius.",
     attributes: { enforcementState: "external_declared", controlEffect: "deny" },
   }),
   node("policy:example-monitor", "Policy", "Example: MCP gateway in monitor mode", MCP, {
@@ -466,7 +466,7 @@ const connectorRuns: ConnectorRun[] = [
   }),
   run(TCC, "macOS privacy permissions", "requires_permission", {
     dataCategories: ["privacy permission state"],
-    requiredPrivileges: ["An explicitly user-exported report; AgentRadius does not read TCC.db"],
+    requiredPrivileges: ["An explicitly user-exported report; MCPRadius does not read TCC.db"],
     coverage: "Not collected. Permissions are shown as unknown.",
     blindSpots: ["All TCC-controlled services"],
   }),

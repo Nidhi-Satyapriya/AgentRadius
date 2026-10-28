@@ -99,7 +99,7 @@ export function Shell({
             <a className="brand" href={href("overview")}>
               <RadiusMark size={26} />
               <h1>
-                Agent<span>Radius</span>
+                MCP<span>Radius</span>
               </h1>
             </a>
             <nav aria-label="Primary" className="topnav">

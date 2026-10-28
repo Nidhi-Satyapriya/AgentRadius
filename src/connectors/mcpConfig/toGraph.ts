@@ -242,7 +242,7 @@ export function clientToGraph(observation: ClientObservation): {
         g.node(resId, "Resource", `${service.label} — data reachable through MCP`, evidence, {
           boundary: tbId,
           description:
-            "Read and write access is inferred from what this server usually offers. What it can actually do depends on the account and token behind it, which AgentRadius has not checked.",
+            "Read and write access is inferred from what this server usually offers. What it can actually do depends on the account and token behind it, which MCPRadius has not checked.",
           attributes: service.arbitraryEgress === true ? { networkEgress: true } : {},
         });
         const ev = MATCH_EVIDENCE[kind];
@@ -293,7 +293,7 @@ function addLocalCapability(
   for (const t of targets) {
     g.node(t.id, "Resource", t.label, evidence, {
       boundary: LOCAL_BOUNDARY_ID,
-      description: `${capability.description} Based on what this kind of server usually offers; AgentRadius did not start it.`,
+      description: `${capability.description} Based on what this kind of server usually offers; MCPRadius did not start it.`,
     });
     for (const action of capability.actions) {
       g.edge(serverId, ACTION_EDGE[action], t.id, evidence, {
@@ -337,7 +337,7 @@ function describeServer(server: ServerDeclaration, clientLabel: string): string 
       : server.packageName !== undefined
         ? `${server.packageSource ?? "local"} package ${server.packageName}`
         : `local command ${server.command ?? "(unknown)"}`;
-  return `Configured in ${clientLabel} (${server.scope} scope) as a ${how}. Declared in configuration; AgentRadius did not start it, so its tools are not listed.`;
+  return `Configured in ${clientLabel} (${server.scope} scope) as a ${how}. Declared in configuration; MCPRadius did not start it, so its tools are not listed.`;
 }
 
 const STORAGE_TEXT: Record<NamedKey["storage"], string> = {
